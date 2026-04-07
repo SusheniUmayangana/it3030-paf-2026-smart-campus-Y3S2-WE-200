@@ -30,30 +30,82 @@ public class User {
     @Column(nullable = false)
     private String role; // USER, ADMIN, TECHNICIAN
 
-    public User() {}
+    // 1. REQUIRED: Empty constructor for Spring/JPA (Do not delete)
+    public User() {
+    }
+
+    // 2. NEW: The 6-argument constructor to fix the OAuth Handler error
+    public User(String email, String name, String profilePicture, String provider, String providerId, String role) {
+        this.email = email;
+        this.name = name;
+        this.profilePicture = profilePicture;
+        this.provider = provider;
+        this.providerId = providerId;
+        this.role = role;
+    }
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public String getEmail() {
+        return email;
+    }
 
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-    public String getProfilePicture() { return profilePicture; }
-    public void setProfilePicture(String profilePicture) { this.profilePicture = profilePicture; }
+    public String getName() {
+        return name;
+    }
 
-    public String getProvider() { return provider; }
-    public void setProvider(String provider) { this.provider = provider; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public String getProviderId() { return providerId; }
-    public void setProviderId(String providerId) { this.providerId = providerId; }
+    public String getPassword() {
+        return password;
+    }
 
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getProfilePicture() {
+        return profilePicture;
+    }
+
+    public void setProfilePicture(String profilePicture) {
+        this.profilePicture = profilePicture;
+    }
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
+    }
+
+    public String getProviderId() {
+        return providerId;
+    }
+
+    public void setProviderId(String providerId) {
+        this.providerId = providerId;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
 }
