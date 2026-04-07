@@ -1,15 +1,11 @@
 import { useState, useEffect } from 'react';
+import { BrowserRouter } from 'react-router-dom';
 import { API_BASE } from './config';
-import Navbar from './components/Navbar';
-import Landing from './pages/Landing';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
+import AppRoutes from './routes/AppRoutes';
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState('login'); // 'login' or 'signup'
-  const [loginMsg, setLoginMsg] = useState('');
 
   useEffect(() => {
     fetch(`${API_BASE}/api/auth/status`, { credentials: 'include' })
@@ -39,32 +35,9 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-950 relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-primary-500/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-accent-500/5 rounded-full blur-3xl" />
-
-      {/* Navbar */}
-      <Navbar user={user} onLogout={handleLogout} />
-
-      {/* Main Content */}
-      <main className="relative z-10 flex items-center justify-center px-4" style={{ minHeight: 'calc(100vh - 72px)' }}>
-        {user ? (
-          <Landing user={user} />
-        ) : mode === 'login' ? (
-          <Login 
-            onLoginSuccess={setUser}
-            onSwitchToSignup={() => { setMode('signup'); setLoginMsg(''); }}
-            initialMessage={loginMsg}
-          />
-        ) : (
-          <Signup 
-            onSignupSuccess={(msg) => { setMode('login'); setLoginMsg(msg); }}
-            onSwitchToLogin={() => setMode('login')}
-          />
-        )}
-      </main>
-    </div>
+    <BrowserRouter>
+      <AppRoutes user={user} onSetUser={setUser} onLogout={handleLogout} />
+    </BrowserRouter>
   );
 }
 

@@ -1,10 +1,15 @@
 import { useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE } from '../config';
 
-export default function Login({ onLoginSuccess, onSwitchToSignup, initialMessage }) {
+export default function Login({ onLoginSuccess }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const initialMessage = location.state?.message || '';
+
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(initialMessage || '');
+  const [success, setSuccess] = useState(initialMessage);
   const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
@@ -42,6 +47,7 @@ export default function Login({ onLoginSuccess, onSwitchToSignup, initialMessage
         role: data.role,
         picture: data.profilePicture,
       });
+      // The router's AuthRoute will automatically redirect to '/' since user is now set
     } catch {
       setError('Cannot connect to server. Make sure the backend is running.');
     }
@@ -150,13 +156,9 @@ export default function Login({ onLoginSuccess, onSwitchToSignup, initialMessage
 
         <p className="text-center text-sm text-surface-500 mt-5">
           Don't have an account?{' '}
-          <button
-            id="switch-mode-btn"
-            onClick={onSwitchToSignup}
-            className="text-primary-400 hover:text-primary-300 font-semibold transition-colors"
-          >
+          <Link to="/signup" className="text-primary-400 hover:text-primary-300 font-semibold transition-colors">
             Sign Up
-          </button>
+          </Link>
         </p>
       </div>
 

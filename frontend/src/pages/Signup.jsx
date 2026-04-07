@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { API_BASE } from '../config';
 
-export default function Signup({ onSignupSuccess, onSwitchToLogin }) {
+export default function Signup() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -32,7 +34,8 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }) {
         return;
       }
 
-      onSignupSuccess(data.message);
+      // Success, redirect to login page with success message
+      navigate('/login', { state: { message: data.message } });
     } catch {
       setError('Cannot connect to server. Make sure the backend is running.');
     }
@@ -152,13 +155,9 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }) {
 
         <p className="text-center text-sm text-surface-500 mt-5">
           Already have an account?{' '}
-          <button
-            id="switch-mode-btn"
-            onClick={onSwitchToLogin}
-            className="text-primary-400 hover:text-primary-300 font-semibold transition-colors"
-          >
+          <Link to="/login" className="text-primary-400 hover:text-primary-300 font-semibold transition-colors">
             Sign In
-          </button>
+          </Link>
         </p>
       </div>
 
