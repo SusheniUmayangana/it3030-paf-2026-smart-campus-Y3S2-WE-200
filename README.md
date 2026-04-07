@@ -17,22 +17,24 @@ The system modernizes university operations by providing a unified platform for:
 ## 🚀 Tech Stack
 
 ### **Backend (Spring Boot)**
-- Java 17  
+- Java 21 
 - Spring Web  
 - Spring Data JPA  
 - Spring Security + OAuth 2.0 (Google Login)  
-- MySQL / PostgreSQL  
+- MySQL   
 - Maven  
 
 ### **Frontend (React)**
-- React + Vite / CRA  
+- React + Vite / CRA
+- Tailwind CSS
 - Axios  
 - React Router  
 - Context API / Redux (optional)  
 
 ### **DevOps**
 - GitHub Actions (CI pipeline)  
-- GitHub Issues & Projects  
+- GitHub Issues & Projects
+- Branching strategy (feature-based workflow)
 
 ---
 
@@ -110,10 +112,10 @@ Each member implements at least **4 REST API endpoints** and corresponding UI co
 
 |IT Number| Name | Role |
 | :---| :--- | :--- |
-| IT23256378 | Kalubowila K S U |... |
-| IT23265806 | Navoda D G H | .... |
-| IT23242340 | Perera N R S D | ... |
-| IT23150102 | Hapugoda H K D S | ... |
+| IT23256378 | Kalubowila K S U | Facilities catalogue + resource management endpoints  |
+| IT23265806 | Navoda D G H |Incident tickets + attachments + technician updates |
+| IT23242340 | Perera N R S D | Booking workflow + conflict checking  |
+| IT23150102 | Hapugoda H K D S | Notifications + role management + OAuth integration improvements  |
 ---
 
 ## 📄 License
