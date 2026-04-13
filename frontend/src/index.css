@@ -2,10 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== Base Styles ===== */
 @layer base {
   body {
-    @apply bg-surface-950 text-surface-100 font-sans antialiased;
+    /* Changed surface-950 to slate-950 */
+    @apply bg-slate-950 text-slate-100 font-sans antialiased;
     overflow-x: hidden;
   }
 
@@ -27,14 +27,14 @@
   }
 }
 
-/* ===== Component Classes ===== */
 @layer components {
   .glass {
-    @apply bg-surface-900/60 backdrop-blur-xl border border-primary-500/[0.15] rounded-2xl;
+    /* Changed surface-900 to slate-900 and primary to indigo */
+    @apply bg-slate-900/60 backdrop-blur-xl border border-indigo-500/[0.15] rounded-2xl;
   }
 
   .glass-light {
-    @apply bg-surface-800/50 backdrop-blur-md border border-primary-500/10 rounded-xl;
+    @apply bg-slate-800/50 backdrop-blur-md border border-indigo-500/10 rounded-xl;
   }
 
   .gradient-text {
@@ -46,11 +46,11 @@
 
   .glow {
     box-shadow: 0 0 20px rgba(99, 102, 241, 0.15),
-      0 0 60px rgba(99, 102, 241, 0.05);
+                0 0 60px rgba(99, 102, 241, 0.05);
   }
 
   .glow-accent {
     box-shadow: 0 0 20px rgba(16, 185, 129, 0.15),
-      0 0 60px rgba(16, 185, 129, 0.05);
+                0 0 60px rgba(16, 185, 129, 0.05);
   }
 }
