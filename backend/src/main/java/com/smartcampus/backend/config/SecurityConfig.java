@@ -3,12 +3,10 @@ package com.smartcampus.backend.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.web.SecurityFilterChain;
-
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-// import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -16,13 +14,22 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 @Configuration
+@EnableWebSecurity
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable()) // Disabled to allow Postman testing
                 .authorizeHttpRequests(auth -> auth
+                        // Permits all requests so you can demonstrate your API during the viva
+                        .requestMatchers("/api/resources/**", "/api/auth/**").permitAll()
                         .anyRequest().permitAll())
                 .formLogin(login -> login.disable())
                 .httpBasic(basic -> basic.disable());
@@ -30,56 +37,17 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // @Configuration
-    // @EnableWebSecurity
-    // public class SecurityConfig {
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        // Allow your React frontend (Vite default port)
+        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
 
-    // private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
-
-    // public SecurityConfig(OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler) {
-    // this.oAuth2LoginSuccessHandler = oAuth2LoginSuccessHandler;
-    // }
-
-    // @Bean
-    // public PasswordEncoder passwordEncoder() {
-    // return new BCryptPasswordEncoder();
-    // }
-
-    // @Bean
-    // public SecurityFilterChain securityFilterChain(HttpSecurity http) throws
-    // Exception {
-    // http
-    // .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-    // .csrf(csrf -> csrf.disable())
-    // .authorizeHttpRequests(auth -> auth
-    // .requestMatchers("/api/auth/**", "/oauth2/**", "/login/**").permitAll()
-    // .anyRequest().authenticated())
-    // .oauth2Login(oauth2 -> oauth2
-    // .successHandler(oAuth2LoginSuccessHandler))
-    // .logout(logout -> logout
-    // .logoutUrl("/api/auth/logout")
-    // .logoutSuccessHandler((request, response, authentication) -> {
-    // response.setStatus(200);
-    // response.setContentType("application/json");
-    // response.getWriter().write("{\"message\":\"Logged out successfully\"}");
-    // })
-    // .invalidateHttpSession(true)
-    // .deleteCookies("JSESSIONID"));
-
-    // return http.build();
-    // }
-
-    // @Bean
-    // public CorsConfigurationSource corsConfigurationSource() {
-    // CorsConfiguration config = new CorsConfiguration();
-    // config.setAllowedOrigins(List.of("http://localhost:5173"));
-    // config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-    // config.setAllowedHeaders(List.of("*"));
-    // config.setAllowCredentials(true);
-    // return new UrlBasedCorsConfigurationSource() {
-    // {
-    // registerCorsConfiguration("/**", config);
-    // }
-    // };
-    // }
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
 }
