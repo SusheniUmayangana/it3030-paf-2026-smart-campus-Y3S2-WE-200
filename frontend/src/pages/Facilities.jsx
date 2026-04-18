@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 import { getResources, deleteResource, createResource, updateResource } from '../services/facilitiesService';
 import { Building2, Plus, X, Edit, Trash2 } from 'lucide-react';
 
@@ -29,16 +30,18 @@ const Facilities = () => {
             if (editingId) {
                 // UPDATE existing resource
                 await updateResource(editingId, formData);
+                // Success Message for Update
+                toast.success('Facility updated successfully!');
             } else {
                 // CREATE new resource
                 await createResource(formData);
+                // Success Message for Create
+                toast.success('New facility added!');
             }
-
             closeModal();
-            loadData(); // Refresh the grid
+            loadData();// Refresh the grid
         } catch (err) {
-            console.error(err);
-            alert(editingId ? "Error updating resource!" : "Error adding resource!");
+            toast.error('Operation failed. Please try again.');
         } finally {
             setIsSaving(false);
         }
@@ -56,6 +59,19 @@ const Facilities = () => {
         setShowModal(true);
     };
 
+    const handleDelete = async (id) => {
+        if (window.confirm("Delete this facility?")) {
+            try {
+                await deleteResource(id);
+                // 4. Add Success Message for Delete
+                toast.success('Facility removed.');
+                loadData();
+            } catch (err) {
+                toast.error('Could not delete resource.');
+            }
+        }
+    };
+
     const closeModal = () => {
         setShowModal(false);
         setEditingId(null);
@@ -64,6 +80,16 @@ const Facilities = () => {
 
     return (
         <div className="p-10 bg-slate-950 min-h-screen text-white">
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    style: {
+                        background: '#1e293b', // matches your slate-900
+                        color: '#fff',
+                        border: '1px solid #334155'
+                    },
+                }}
+            />
             {/* Header */}
             <div className="flex justify-between items-center mb-8">
                 <div>
@@ -164,8 +190,8 @@ const Facilities = () => {
                                 <Edit size={14} /> Edit
                             </button>
                             <button
-                                onClick={() => { if (window.confirm("Delete this facility?")) deleteResource(item.id).then(loadData) }}
-                                className="flex-1 flex justify-center items-center gap-2 py-2.5 rounded-lg hover:bg-rose-500/10 text-rose-500 text-xs font-bold border border-transparent hover:border-rose-500/20 transition-all"
+                                onClick={() => handleDelete(item.id)}
+                                className="flex-1 flex justify-center items-center gap-2 py-2.5 rounded-lg hover:bg-rose-500/10 text-rose-500 text-xs font-bold transition-all"
                             >
                                 <Trash2 size={14} /> Remove
                             </button>
