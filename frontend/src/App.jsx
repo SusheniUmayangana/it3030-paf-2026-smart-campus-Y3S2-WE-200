@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { API_BASE } from './config';
 import AppRoutes from './routes/AppRoutes';
-import Facilities from './pages/Facilities';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -36,17 +35,9 @@ function App() {
   }
 
   return (
-
     <BrowserRouter>
       <AppRoutes user={user} onSetUser={setUser} onLogout={handleLogout} />
-
-      <div className="App">
-        <Facilities />
-      </div>
-
     </BrowserRouter>
-
-
   );
 }
 

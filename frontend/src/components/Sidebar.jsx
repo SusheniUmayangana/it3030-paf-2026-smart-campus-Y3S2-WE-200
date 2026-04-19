@@ -1,13 +1,16 @@
 import { NavLink } from 'react-router-dom';
 
-export default function Sidebar() {
+export default function Sidebar({ user }) {
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+
     const links = [
-        { name: 'Dashboard', path: '/' },
-        { name: 'User Management', path: '/users' },
-        { name: 'Facilities', path: '/facilities' },
-        { name: 'Bookings', path: '/bookings' },
-        { name: 'Tickets', path: '/tickets' },
-        { name: 'Notifications', path: '/notifications' },
+        { name: 'Dashboard', path: '/', show: true },
+        { name: 'User Management', path: '/users', show: isAdmin },
+        { name: 'My Profile', path: '/profile', show: true },
+        { name: 'Facilities', path: '/facilities', show: true },
+        { name: 'Bookings', path: '/bookings', show: true },
+        { name: 'Tickets', path: '/tickets', show: true },
+        { name: 'Notifications', path: '/notifications', show: true },
     ];
 
     return (
@@ -16,7 +19,7 @@ export default function Sidebar() {
                 Menu
             </div>
             <nav className="flex flex-col gap-1.5">
-                {links.map((link) => (
+                {links.filter((l) => l.show).map((link) => (
                     <NavLink
                         key={link.name}
                         to={link.path}

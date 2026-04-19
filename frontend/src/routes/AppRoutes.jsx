@@ -4,8 +4,9 @@ import AuthLayout from '../layouts/AuthLayout';
 
 import Login from '../pages/Login';
 import Signup from '../pages/Signup';
-import Landing from '../pages/Landing'; // Dashboard
+import Landing from '../pages/Landing';
 import UserManagement from '../pages/UserManagement';
+import Profile from '../pages/Profile';
 import Facilities from '../pages/Facilities';
 import Bookings from '../pages/Bookings';
 import Tickets from '../pages/Tickets';
@@ -20,6 +21,12 @@ export default function AppRoutes({ user, onSetUser, onLogout }) {
         return user ? <Navigate to="/" replace /> : element;
     };
 
+    const AdminRoute = ({ element }) => {
+        if (!user) return <Navigate to="/login" replace />;
+        if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') return <Navigate to="/" replace />;
+        return element;
+    };
+
     return (
         <Routes>
             <Route element={<AuthLayout />}>
@@ -29,7 +36,8 @@ export default function AppRoutes({ user, onSetUser, onLogout }) {
 
             <Route element={<MainLayout user={user} onLogout={onLogout} />}>
                 <Route path="/" element={<ProtectedRoute element={<Landing user={user} />} />} />
-                <Route path="/users" element={<ProtectedRoute element={<UserManagement />} />} />
+                <Route path="/users" element={<AdminRoute element={<UserManagement user={user} />} />} />
+                <Route path="/profile" element={<ProtectedRoute element={<Profile user={user} onUserUpdate={(updated) => onSetUser({ ...user, ...updated })} />} />} />
                 <Route path="/facilities" element={<ProtectedRoute element={<Facilities />} />} />
                 <Route path="/bookings" element={<ProtectedRoute element={<Bookings />} />} />
                 <Route path="/tickets" element={<ProtectedRoute element={<Tickets />} />} />

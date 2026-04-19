@@ -2,9 +2,15 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { API_BASE } from '../config';
 
+const ROLES = [
+    { value: 'USER', label: 'User' },
+    { value: 'MANAGER', label: 'Manager' },
+    { value: 'TECHNICIAN', label: 'Technician' },
+];
+
 export default function Signup() {
     const navigate = useNavigate();
-    const [form, setForm] = useState({ name: '', email: '', password: '' });
+    const [form, setForm] = useState({ name: '', email: '', password: '', role: 'USER' });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
@@ -121,6 +127,33 @@ export default function Signup() {
                             minLength={6}
                             className="w-full px-4 py-3 rounded-xl bg-surface-900/50 border border-surface-700/50 text-surface-200 placeholder-surface-600 text-sm focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/25 transition-all"
                         />
+                    </div>
+
+                    {/* Role Selector */}
+                    <div>
+                        <label htmlFor="role" className="block text-xs font-semibold text-surface-400 uppercase tracking-wider mb-1.5">
+                            Role
+                        </label>
+                        <div className="relative">
+                            <select
+                                id="role"
+                                name="role"
+                                value={form.role}
+                                onChange={handleChange}
+                                className="w-full px-4 py-3 rounded-xl bg-surface-900/50 border border-surface-700/50 text-surface-200 text-sm focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/25 transition-all appearance-none cursor-pointer"
+                            >
+                                {ROLES.map((r) => (
+                                    <option key={r.value} value={r.value} className="bg-surface-900 text-surface-200">
+                                        {r.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                <svg className="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                        </div>
                     </div>
 
                     <button

@@ -42,12 +42,12 @@ export default function Login({ onLoginSuccess }) {
 
             onLoginSuccess({
                 authenticated: true,
+                id: data.id,
                 name: data.name,
                 email: data.email,
                 role: data.role,
                 picture: data.profilePicture,
             });
-            // The router's AuthRoute will automatically redirect to '/' since user is now set
         } catch {
             setError('Cannot connect to server. Make sure the backend is running.');
         }

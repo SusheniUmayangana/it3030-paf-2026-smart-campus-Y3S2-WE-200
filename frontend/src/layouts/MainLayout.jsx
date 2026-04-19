@@ -14,7 +14,7 @@ export default function MainLayout({ user, onLogout }) {
 
       {/* Sidebar + Content */}
       <div className="relative z-10 flex flex-1 overflow-hidden pointer-events-auto min-h-[calc(100vh-72px)]">
-        <Sidebar />
+        <Sidebar user={user} />
         <main className="flex-1 overflow-y-auto p-6 md:p-8">
           <Outlet />
         </main>
