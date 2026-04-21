@@ -3,19 +3,10 @@ package com.smartcampus.backend.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "ticket_comment")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Table(name = "ticket_comments")
 public class TicketComment {
 
     @Id
@@ -36,18 +27,45 @@ public class TicketComment {
     private String content;
 
     @Column(name = "is_edited", nullable = false)
-    @Builder.Default
     private Boolean isEdited = false;
 
     @Column(name = "is_deleted", nullable = false)
-    @Builder.Default
     private Boolean isDeleted = false;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+
+    public TicketComment() {}
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public IncidentTicket getTicket() { return ticket; }
+    public void setTicket(IncidentTicket ticket) { this.ticket = ticket; }
+
+    public User getAuthor() { return author; }
+    public void setAuthor(User author) { this.author = author; }
+
+    public String getContent() { return content; }
+    public void setContent(String content) { this.content = content; }
+
+    public Boolean getIsEdited() { return isEdited; }
+    public void setIsEdited(Boolean isEdited) { this.isEdited = isEdited; }
+
+    public Boolean getIsDeleted() { return isDeleted; }
+    public void setIsDeleted(Boolean isDeleted) { this.isDeleted = isDeleted; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
 }
