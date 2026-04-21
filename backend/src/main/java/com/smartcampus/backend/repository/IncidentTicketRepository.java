@@ -11,7 +11,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface IncidentTicketRepository extends JpaRepository<IncidentTicket, Long> {
 
-    // Updated to Long to match teammate's User.java ID type
     Page<IncidentTicket> findByReporter_Id(Long reporterId, Pageable pageable);
 
     Page<IncidentTicket> findByStatus(String status, Pageable pageable);

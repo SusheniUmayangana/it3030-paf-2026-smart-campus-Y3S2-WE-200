@@ -44,7 +44,6 @@ public class IncidentTicket {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    // Matches your teammates' timestamp logic
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -59,7 +58,7 @@ public class IncidentTicket {
     // Default Constructor
     public IncidentTicket() {}
 
-    // Manual Getters and Setters (Matching Team Style)
+    //Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
