@@ -1,18 +1,10 @@
 package com.smartcampus.backend.model;
 
 import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "ticket_attachment")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Table(name = "ticket_attachments")
 public class TicketAttachment {
 
     @Id
@@ -35,7 +27,32 @@ public class TicketAttachment {
     @Column(name = "file_size")
     private Long fileSize;
 
-    @CreationTimestamp
-    @Column(name = "uploaded_at", updatable = false)
     private LocalDateTime uploadedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        uploadedAt = LocalDateTime.now();
+    }
+
+    public TicketAttachment() {}
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public IncidentTicket getTicket() { return ticket; }
+    public void setTicket(IncidentTicket ticket) { this.ticket = ticket; }
+
+    public String getFileUrl() { return fileUrl; }
+    public void setFileUrl(String fileUrl) { this.fileUrl = fileUrl; }
+
+    public String getFileName() { return fileName; }
+    public void setFileName(String fileName) { this.fileName = fileName; }
+
+    public String getFileType() { return fileType; }
+    public void setFileType(String fileType) { this.fileType = fileType; }
+
+    public Long getFileSize() { return fileSize; }
+    public void setFileSize(Long fileSize) { this.fileSize = fileSize; }
+
+    public LocalDateTime getUploadedAt() { return uploadedAt; }
 }
