@@ -38,6 +38,7 @@ public class ResourceService {
         existing.setStatus(updated.getStatus());
         existing.setAvailabilityStart(updated.getAvailabilityStart());
         existing.setAvailabilityEnd(updated.getAvailabilityEnd());
+        existing.setImageUrl(updated.getImageUrl());
 
         return repository.save(existing);
     }
