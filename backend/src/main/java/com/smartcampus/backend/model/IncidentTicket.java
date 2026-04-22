@@ -3,6 +3,8 @@ package com.smartcampus.backend.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "incident_tickets")
@@ -41,8 +43,20 @@ public class IncidentTicket {
 
     private String status = "OPEN"; 
 
+    @Column(columnDefinition = "TEXT")
+    private String resolutionNotes;
+
+    @Column(columnDefinition = "TEXT")
+    private String rejectionReason;
+
+    private String contactDetails;
+    private LocalDateTime assignedAt;
+    private LocalDateTime resolvedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TicketAttachment> attachments = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
@@ -55,10 +69,9 @@ public class IncidentTicket {
         updatedAt = LocalDateTime.now();
     }
 
-    // Default Constructor
     public IncidentTicket() {}
 
-    //Getters and Setters
+    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -86,6 +99,24 @@ public class IncidentTicket {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
+    public String getResolutionNotes() { return resolutionNotes; }
+    public void setResolutionNotes(String notes) { this.resolutionNotes = notes; }
+
+    public String getRejectionReason() { return rejectionReason; }
+    public void setRejectionReason(String reason) { this.rejectionReason = reason; }
+
+    public String getContactDetails() { return contactDetails; }
+    public void setContactDetails(String details) { this.contactDetails = details; }
+
+    public LocalDateTime getAssignedAt() { return assignedAt; }
+    public void setAssignedAt(LocalDateTime time) { this.assignedAt = time; }
+
+    public LocalDateTime getResolvedAt() { return resolvedAt; }
+    public void setResolvedAt(LocalDateTime time) { this.resolvedAt = time; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public List<TicketAttachment> getAttachments() { return attachments; }
+    public void setAttachments(List<TicketAttachment> attachments) { this.attachments = attachments; }
 }

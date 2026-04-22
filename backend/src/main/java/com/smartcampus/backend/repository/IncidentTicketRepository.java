@@ -17,6 +17,10 @@ public interface IncidentTicketRepository extends JpaRepository<IncidentTicket, 
 
     Page<IncidentTicket> findByAssignee_Id(Long assigneeId, Pageable pageable);
 
+    Page<IncidentTicket> findByPriority(String priority, Pageable pageable);
+
+    Page<IncidentTicket> findByStatusAndPriority(String status, String priority, Pageable pageable);
+
     boolean existsByIdAndReporter_Id(Long id, Long reporterId);
 
     @Query("SELECT COUNT(a) FROM TicketAttachment a WHERE a.ticket.id = :ticketId")
