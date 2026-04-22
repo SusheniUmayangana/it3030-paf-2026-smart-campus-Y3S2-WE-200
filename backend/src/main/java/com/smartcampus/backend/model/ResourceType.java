@@ -1,8 +1,8 @@
 package com.smartcampus.backend.model;
 
 public enum ResourceType {
-    HALL,
-    LAB,
-    ROOM,
-    EQUIPMENT
+    LECTURE_HALL,
+    LABORATORY,
+    STUDY_AREA,
+    SPORTS_FACILITY
 }

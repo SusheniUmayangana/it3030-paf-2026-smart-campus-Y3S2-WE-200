@@ -8,13 +8,34 @@ const Facilities = () => {
     const [showModal, setShowModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editingId, setEditingId] = useState(null);
+    const [errors, setErrors] = useState({});
+    const DEFAULT_START = '08:00';
+    const DEFAULT_END = '18:00';
     const [formData, setFormData] = useState({
         name: '',
         location: '',
-        capacity: '',
-        type: 'HALL',
-        status: 'ACTIVE'
+        capacity: 0,
+        type: 'LECTURE_HALL',
+        status: 'OPERATIONAL',
+        availabilityStart: DEFAULT_START,
+        availabilityEnd: DEFAULT_END,
+        imageUrl: ''
     });
+
+    const validateForm = () => {
+        let tempErrors = {};
+        if (!formData.name.trim()) tempErrors.name = "Name is required";
+        if (!formData.location.trim()) tempErrors.location = "Location is required";
+        if (!formData.capacity || formData.capacity <= 0) tempErrors.capacity = "Enter a valid capacity";
+
+        // Time Logic Check
+        if (formData.availabilityStart >= formData.availabilityEnd) {
+            tempErrors.time = "Closing must be after Opening";
+        }
+
+        setErrors(tempErrors);
+        return Object.keys(tempErrors).length === 0;
+    };
 
     const loadData = async () => {
         const res = await getResources();
@@ -25,7 +46,10 @@ const Facilities = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setIsSaving(true);
+        if (!validateForm()) {
+            toast.error("Please fix the errors in the form");
+            return;
+        } setIsSaving(true);
         try {
             if (editingId) {
                 // UPDATE existing resource
@@ -53,7 +77,10 @@ const Facilities = () => {
             location: item.location,
             capacity: item.capacity,
             type: item.type,
-            status: item.status
+            status: item.status,
+            imageUrl: item.imageUrl || '',
+            availabilityStart: item.availabilityStart || DEFAULT_START,
+            availabilityEnd: item.availabilityEnd || DEFAULT_END
         });
         setEditingId(item.id);
         setShowModal(true);
@@ -75,7 +102,17 @@ const Facilities = () => {
     const closeModal = () => {
         setShowModal(false);
         setEditingId(null);
-        setFormData({ name: '', location: '', capacity: '', type: 'HALL', status: 'ACTIVE' });
+        setErrors({});
+        setFormData({
+            name: '',
+            location: '',
+            capacity: 0,
+            type: 'LECTURE_HALL',
+            status: 'OPERATIONAL',
+            imageUrl: '',
+            availabilityStart: DEFAULT_START,
+            availabilityEnd: DEFAULT_END
+        });
     };
 
     return (
@@ -84,7 +121,7 @@ const Facilities = () => {
                 position="top-right"
                 toastOptions={{
                     style: {
-                        background: '#1e293b', // matches your slate-900
+                        background: '#1e293b',
                         color: '#fff',
                         border: '1px solid #334155'
                     },
@@ -119,42 +156,117 @@ const Facilities = () => {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                        <form onSubmit={handleSubmit} className="space-y-4 text-left">
+                            {/* Facility Name */}
                             <div>
-                                <label className="text-xs font-semibold text-slate-400 uppercase mb-1 block">Facility Name</label>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Facility Name</label>
                                 <input
-                                    type="text" placeholder="e.g. Auditorium A" required
+                                    type="text" required
                                     value={formData.name}
-                                    className="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg outline-none focus:border-indigo-500 transition-colors"
+                                    className={`w-full bg-[#111827] border ${errors.name ? 'border-rose-500' : 'border-slate-700'} p-3 rounded-xl outline-none text-sm focus:border-indigo-500 transition-all`}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold text-slate-400 uppercase mb-1 block">Location</label>
-                                <input
-                                    type="text" placeholder="e.g. Block 04 - Level 2" required
-                                    value={formData.location}
-                                    className="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg outline-none focus:border-indigo-500 transition-colors"
-                                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold text-slate-400 uppercase mb-1 block">Capacity</label>
-                                <input
-                                    type="number" placeholder="Total Seats" required
-                                    value={formData.capacity}
-                                    className="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg outline-none focus:border-indigo-500 transition-colors"
-                                    onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
+                                    placeholder="e.g. Innovation Center"
                                 />
                             </div>
 
-                            <button
-                                type="submit"
-                                disabled={isSaving}
-                                className="w-full bg-indigo-600 p-3 rounded-lg font-bold hover:bg-indigo-500 transition-all mt-4 flex justify-center items-center gap-2 shadow-lg shadow-indigo-600/20"
-                            >
-                                {isSaving ? 'Processing...' : (editingId ? 'Update Facility' : 'Save Facility')}
-                            </button>
+                            {/* Location & Capacity Grid */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Location</label>
+                                    <input
+                                        type="text" required
+                                        value={formData.location}
+                                        className={`w-full bg-[#111827] border ${errors.location ? 'border-rose-500' : 'border-slate-700'} p-3 rounded-xl outline-none text-sm`}
+                                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                        placeholder="Block A, Level 2"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Capacity</label>
+                                    <input
+                                        type="number" required
+                                        value={formData.capacity}
+                                        className={`w-full bg-[#111827] border ${errors.capacity ? 'border-rose-500' : 'border-slate-700'} p-3 rounded-xl outline-none text-sm`}
+                                        onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Image URL */}
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Image URL</label>
+                                <input
+                                    type="text"
+                                    value={formData.imageUrl}
+                                    className="w-full bg-[#111827] border border-slate-700 p-3 rounded-xl outline-none text-sm"
+                                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                                    placeholder="https://images.unsplash.com/..."
+                                />
+                            </div>
+
+                            {/* Classification & Status Grid */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Type</label>
+                                    <select
+                                        value={formData.type}
+                                        className="w-full bg-[#111827] border border-slate-700 p-3 rounded-xl outline-none text-sm"
+                                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                    >
+                                        <option value="LECTURE_HALL">Lecture Hall</option>
+                                        <option value="LABORATORY">Laboratory</option>
+                                        <option value="STUDY_AREA">Study Area</option>
+                                        <option value="SPORTS_FACILITY">Sports Facility</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Status</label>
+                                    <select
+                                        value={formData.status}
+                                        className="w-full bg-[#111827] border border-slate-700 p-3 rounded-xl outline-none text-sm"
+                                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                    >
+                                        <option value="OPERATIONAL">OPERATIONAL</option>
+                                        <option value="MAINTENANCE">MAINTENANCE</option>
+                                        <option value="OFFLINE">OFFLINE</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Fixed Operating Hours Section */}
+                            <div className={`p-4 border ${errors.time ? 'border-rose-500' : 'border-slate-700/50'} rounded-2xl bg-slate-900/40`}>
+                                <div className="grid grid-cols-2 gap-4 p-4 bg-slate-900/50 rounded-xl border border-slate-800">
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Opens</label>
+                                        <input
+                                            type="time"
+                                            value={formData.availabilityStart}
+                                            readOnly
+                                            className="bg-transparent outline-none text-indigo-400/50 font-bold cursor-not-allowed w-full"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Closes</label>
+                                        <input
+                                            type="time"
+                                            value={formData.availabilityEnd}
+                                            readOnly
+                                            className="bg-transparent outline-none text-indigo-400 font-bold cursor-not-allowed w-full"
+                                        />
+                                    </div>
+                                </div>
+                                {errors.time && <p className="text-[10px] text-rose-500 mt-2 text-center font-bold uppercase">{errors.time}</p>}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-3 pt-4">
+                                <button type="submit" disabled={isSaving} className="flex-[2] bg-indigo-600 hover:bg-indigo-500 p-3 rounded-xl font-bold text-sm transition-all uppercase">
+                                    {isSaving ? 'Saving...' : (editingId ? 'Update Asset' : 'Deploy Asset')}
+                                </button>
+                                <button type="button" onClick={closeModal} className="flex-1 border border-slate-700 p-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 transition-all uppercase">
+                                    Discard
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -163,38 +275,92 @@ const Facilities = () => {
             {/* Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {list.length > 0 ? list.map(item => (
-                    <div key={item.id} className="glass p-6 border border-slate-800 hover:border-indigo-500/50 transition-all group">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="p-3 bg-indigo-500/10 rounded-xl group-hover:bg-indigo-500/20 transition-colors">
-                                <Building2 className="text-indigo-400" size={28} />
+                    <div key={item.id} className="group bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-3xl overflow-hidden hover:border-indigo-500/50 transition-all duration-300 shadow-xl flex flex-col">
+
+                        {/* Image Section with Gradient Overlay */}
+                        <div className="relative h-48 w-full overflow-hidden">
+                            {item.imageUrl ? (
+                                <img
+                                    src={item.imageUrl}
+                                    alt={item.name}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-slate-800 flex items-center justify-center text-slate-600 italic text-xs">
+                                    No Preview Available
+                                </div>
+                            )}
+
+                            {/* Status Badge - Floating */}
+                            <div className="absolute top-4 right-4">
+                                <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase shadow-xl border backdrop-blur-md transition-all ${item.status === 'OPERATIONAL'
+                                    ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 shadow-emerald-900/20'
+                                    : item.status === 'MAINTENANCE'
+                                        ? 'bg-amber-500/25 text-amber-300 border-amber-500/40 shadow-amber-900/20'
+                                        : 'bg-rose-500/25 text-rose-300 border-rose-500/40 shadow-rose-900/20'
+                                    }`}>
+                                    {/* The Indicator Dot - Now even brighter for contrast */}
+                                    <span className={`inline-block w-2 h-2 rounded-full mr-2 shadow-[0_0_8px_rgba(255,255,255,0.3)] ${item.status === 'OPERATIONAL' ? 'bg-emerald-400 animate-pulse' :
+                                        item.status === 'MAINTENANCE' ? 'bg-amber-400' : 'bg-rose-400'
+                                        }`}></span>
+                                    {item.status}
+                                </span>
                             </div>
-                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${item.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-                                }`}>
-                                {item.status}
-                            </span>
+
+                            {/* Type Badge - Bottom Left */}
+                            <div className="absolute bottom-4 left-4">
+                                <span className="bg-black/50 backdrop-blur-md text-indigo-300 text-[9px] px-2 py-1 rounded-md border border-indigo-500/30 font-bold">
+                                    {item.type?.replace('_', ' ')}
+                                </span>
+                            </div>
                         </div>
 
-                        <h2 className="text-xl font-bold text-white">{item.name}</h2>
-                        <p className="text-slate-400 text-sm mt-2 flex items-center gap-2">
-                            <span className="opacity-50 font-medium">Loc:</span> {item.location}
-                        </p>
-                        <p className="text-slate-400 text-sm mt-1 flex items-center gap-2">
-                            <span className="opacity-50 font-medium">Cap:</span> {item.capacity} seats
-                        </p>
+                        {/* Content Section */}
+                        <div className="p-5 flex flex-col flex-grow">
+                            <h3 className="text-xl font-bold text-white group-hover:text-indigo-400 transition-colors line-clamp-1">
+                                {item.name}
+                            </h3>
 
-                        <div className="mt-6 pt-6 border-t border-slate-800/50 flex gap-3">
-                            <button
-                                onClick={() => handleEditClick(item)}
-                                className="flex-1 flex justify-center items-center gap-2 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-bold text-indigo-400 border border-slate-700 transition-colors"
-                            >
-                                <Edit size={14} /> Edit
-                            </button>
-                            <button
-                                onClick={() => handleDelete(item.id)}
-                                className="flex-1 flex justify-center items-center gap-2 py-2.5 rounded-lg hover:bg-rose-500/10 text-rose-500 text-xs font-bold transition-all"
-                            >
-                                <Trash2 size={14} /> Remove
-                            </button>
+                            <div className="mt-4 space-y-2">
+                                <div className="flex items-center text-slate-400 text-sm">
+                                    <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center mr-3">
+                                        <span className="text-indigo-400 text-xs">📍</span>
+                                    </div>
+                                    <span className="font-medium">{item.location}</span>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    {/* Simple CSS Gauge */}
+                                    <div className="w-12 h-12 rounded-full border-4 border-slate-800 border-t-emerald-500 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                                        <span className="text-[10px] font-bold text-emerald-400 font-mono text-center leading-tight">
+                                            0%
+                                        </span>
+                                    </div>
+
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Occupancy</span>
+                                        <span className="text-xs font-bold text-white tracking-tight">
+                                            0 / {item.capacity} <span className="text-[10px] text-slate-500 font-normal ml-1">Seats Taken</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Action Footer */}
+                            <div className="mt-auto pt-6 flex gap-3">
+                                <button
+                                    onClick={() => handleEditClick(item)}
+                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white border border-indigo-500/20 transition-all text-xs font-bold"
+                                >
+                                    <Edit size={14} /> Edit
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(item.id)}
+                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-rose-500/5 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/10 transition-all text-xs font-bold"
+                                >
+                                    <Trash2 size={14} /> Remove
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )) : (
