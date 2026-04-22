@@ -39,9 +39,9 @@ public class IncidentTicket {
     private String description;
 
     @NotBlank(message = "Priority is required")
-    private String priority; 
+    private String priority; // LOW, MEDIUM, HIGH, CRITICAL
 
-    private String status = "OPEN"; 
+    private String status = "OPEN"; // OPEN, IN_PROGRESS, RESOLVED, CLOSED, REJECTED
 
     @Column(columnDefinition = "TEXT")
     private String resolutionNotes;
@@ -50,6 +50,7 @@ public class IncidentTicket {
     private String rejectionReason;
 
     private String contactDetails;
+
     private LocalDateTime assignedAt;
     private LocalDateTime resolvedAt;
     private LocalDateTime createdAt;
@@ -58,10 +59,15 @@ public class IncidentTicket {
     @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TicketAttachment> attachments = new ArrayList<>();
 
+    // ── FIXED: was missing in your uploaded version ───────────
+    @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TicketComment> comments = new ArrayList<>();
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (status == null) status = "OPEN";
     }
 
     @PreUpdate
@@ -71,7 +77,8 @@ public class IncidentTicket {
 
     public IncidentTicket() {}
 
-    // Getters and Setters
+    // ── Getters & Setters ─────────────────────────────────────
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -119,4 +126,7 @@ public class IncidentTicket {
 
     public List<TicketAttachment> getAttachments() { return attachments; }
     public void setAttachments(List<TicketAttachment> attachments) { this.attachments = attachments; }
+
+    public List<TicketComment> getComments() { return comments; }
+    public void setComments(List<TicketComment> comments) { this.comments = comments; }
 }
