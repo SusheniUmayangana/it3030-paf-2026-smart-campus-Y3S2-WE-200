@@ -87,3 +87,40 @@ export async function addComment(ticketId, content) {
   if (!res.ok) throw new Error((await res.json()).message || 'Failed to add comment');
   return res.json();
 }
+
+/**
+ * GET /api/tickets/:id
+ */
+export async function getTicket(ticketId) {
+  const res = await fetch(`${BASE_URL}/${ticketId}`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json()).message || 'Failed to fetch ticket details');
+  return res.json();
+}
+
+/**
+ * PUT /api/tickets/comments/:commentId
+ */
+export async function editComment(commentId, content) {
+  const res = await fetch(`${BASE_URL}/comments/${commentId}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
+  if (!res.ok) throw new Error((await res.json()).message || 'Failed to edit comment');
+  return res.json();
+}
+
+/**
+ * DELETE /api/tickets/comments/:commentId
+ */
+export async function deleteComment(commentId) {
+  const res = await fetch(`${BASE_URL}/comments/${commentId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json()).message || 'Failed to delete comment');
+  return res.json();
+}

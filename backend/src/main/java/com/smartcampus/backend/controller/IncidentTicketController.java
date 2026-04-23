@@ -114,6 +114,39 @@ public class IncidentTicketController {
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> getTicketById(
+            @PathVariable Long id,
+            HttpServletRequest request) {
+        
+        getSessionUser(request); // Just to verify they are logged in
+        Map<String, Object> result = ticketService.getById(id);
+        return ResponseEntity.ok(result);
+    }
+
+    @PutMapping("/comments/{commentId}")
+    public ResponseEntity<Map<String, Object>> editComment(
+            @PathVariable Long commentId,
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request) {
+
+        User caller = getSessionUser(request);
+        String content = body.get("content");
+        
+        Map<String, Object> result = ticketService.editComment(commentId, content, caller);
+        return ResponseEntity.ok(result);
+    }
+
+    @DeleteMapping("/comments/{commentId}")
+    public ResponseEntity<Map<String, Object>> deleteComment(
+            @PathVariable Long commentId,
+            HttpServletRequest request) {
+
+        User caller = getSessionUser(request);
+        Map<String, Object> result = ticketService.deleteComment(commentId, caller);
+        return ResponseEntity.ok(result);
+    }
+
     private User getSessionUser(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("userId") == null) {

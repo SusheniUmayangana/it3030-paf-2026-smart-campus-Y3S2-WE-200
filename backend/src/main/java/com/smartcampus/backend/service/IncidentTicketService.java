@@ -72,6 +72,14 @@ public class IncidentTicketService {
         ticket.setCategory((String) body.get("category"));
         ticket.setDescription((String) body.get("description"));
         ticket.setPriority((String) body.get("priority"));
+        if (body.containsKey("contactDetails")) {
+            ticket.setContactDetails((String) body.get("contactDetails"));
+        }
+        if (body.containsKey("resourceId")) {
+            Long resId = Long.valueOf(body.get("resourceId").toString());
+            Resource resource = resourceRepository.findById(resId).orElse(null);
+            ticket.setResource(resource);
+        }
         ticket.setReporter(reporter);
         ticket.setStatus("OPEN");
 
@@ -121,6 +129,9 @@ public class IncidentTicketService {
         if (body.containsKey("resolutionNotes")) {
             existing.setResolutionNotes((String) body.get("resolutionNotes"));
         }
+        if ("REJECTED".equals(body.get("status")) && body.containsKey("rejectionReason")) {
+            existing.setRejectionReason((String) body.get("rejectionReason"));
+        }
 
         IncidentTicket updated = ticketRepository.save(existing);
         return Map.of("success", true, "ticket", toTicketMap(updated));
@@ -142,6 +153,43 @@ public class IncidentTicketService {
         return Map.of("success", true, "message", "Comment added successfully");
     }
 
+    public Map<String, Object> getById(Long id) {
+        IncidentTicket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(id));
+        return Map.of("success", true, "ticket", toFullTicketMap(ticket));
+    }
+
+    @Transactional
+    public Map<String, Object> editComment(Long commentId, String content, User caller) {
+        TicketComment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException(commentId));
+
+        if (!comment.getAuthor().getId().equals(caller.getId()) && !isAdmin(caller)) {
+            throw new TicketException.AccessDenied("Not authorized to edit this comment.");
+        }
+
+        comment.setContent(content);
+        comment.setIsEdited(true);
+        commentRepository.save(comment);
+
+        return Map.of("success", true, "message", "Comment updated successfully");
+    }
+
+    @Transactional
+    public Map<String, Object> deleteComment(Long commentId, User caller) {
+        TicketComment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException(commentId));
+
+        if (!comment.getAuthor().getId().equals(caller.getId()) && !isAdmin(caller)) {
+            throw new TicketException.AccessDenied("Not authorized to delete this comment.");
+        }
+
+        comment.setIsDeleted(true);
+        commentRepository.save(comment);
+
+        return Map.of("success", true, "message", "Comment deleted successfully");
+    }
+
     private boolean isAdmin(User user) {
         return user != null && (user.getRole().equals("ADMIN") || user.getRole().equals("SUPER_ADMIN"));
     }
@@ -157,6 +205,59 @@ public class IncidentTicketService {
         map.put("status", t.getStatus());
         map.put("priority", t.getPriority());
         if (t.getAssignee() != null) map.put("assignee", t.getAssignee().getName());
+        return map;
+    }
+
+    private Map<String, Object> toFullTicketMap(IncidentTicket t) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id", t.getId());
+        map.put("title", t.getTitle());
+        map.put("description", t.getDescription());
+        map.put("category", t.getCategory());
+        map.put("priority", t.getPriority());
+        map.put("status", t.getStatus());
+        map.put("contactDetails", t.getContactDetails());
+        map.put("resolutionNotes", t.getResolutionNotes());
+        map.put("rejectionReason", t.getRejectionReason());
+        map.put("createdAt", t.getCreatedAt());
+        
+        if (t.getReporter() != null) {
+            map.put("reporter", t.getReporter().getName());
+            map.put("reporterId", t.getReporter().getId());
+        }
+        if (t.getAssignee() != null) {
+            map.put("assignee", t.getAssignee().getName());
+            map.put("assigneeId", t.getAssignee().getId());
+        }
+        if (t.getResource() != null) {
+            map.put("resource", Map.of("id", t.getResource().getId(), "name", t.getResource().getName()));
+        }
+        
+        List<Map<String, Object>> attachments = t.getAttachments().stream()
+            .map(a -> {
+                Map<String, Object> am = new LinkedHashMap<>();
+                am.put("id", a.getId());
+                am.put("fileUrl", a.getFileUrl());
+                am.put("fileName", a.getFileName());
+                return am;
+            })
+            .toList();
+        map.put("attachments", attachments);
+
+        List<Map<String, Object>> comments = commentRepository.findByTicket_IdAndIsDeletedFalseOrderByCreatedAtAsc(t.getId()).stream()
+            .map(c -> {
+                Map<String, Object> cm = new LinkedHashMap<>();
+                cm.put("id", c.getId());
+                cm.put("content", c.getContent());
+                cm.put("authorName", c.getAuthor().getName());
+                cm.put("authorId", c.getAuthor().getId());
+                cm.put("createdAt", c.getCreatedAt());
+                cm.put("isEdited", c.getIsEdited());
+                return cm;
+            })
+            .toList();
+        map.put("comments", comments);
+        
         return map;
     }
 }

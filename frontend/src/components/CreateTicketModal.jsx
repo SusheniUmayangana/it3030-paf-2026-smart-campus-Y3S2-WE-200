@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { X, Upload, AlertCircle } from 'lucide-react';
 import { createTicket } from '../services/ticketsService';
+import { getResources } from '../services/facilitiesService';
 
 const CATEGORIES = ['ELECTRICAL', 'PLUMBING', 'HVAC', 'IT_EQUIPMENT', 'FURNITURE', 'SAFETY', 'OTHER'];
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
@@ -20,7 +21,14 @@ export default function CreateTicketModal({ onClose, onCreated }) {
   const [files, setFiles] = useState([]);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [resources, setResources] = useState([]);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    getResources()
+      .then(res => setResources(res.data))
+      .catch(err => console.error('Failed to load resources', err));
+  }, []);
 
   const validate = () => {
     const e = {};
@@ -140,6 +148,23 @@ export default function CreateTicketModal({ onClose, onCreated }) {
               }`}
             />
             {errors.description && <p className="text-red-400 text-xs mt-1">{errors.description}</p>}
+          </div>
+
+          {/* Resource Selection */}
+          <div>
+            <label className="block text-sm font-medium text-surface-300 mb-1">
+              Resource / Location <span className="text-surface-500">(optional)</span>
+            </label>
+            <select
+              value={form.resourceId}
+              onChange={(e) => setForm({ ...form, resourceId: e.target.value })}
+              className="w-full bg-surface-800/50 border border-surface-700/50 rounded-xl px-4 py-2.5 text-surface-100 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/25 transition-all"
+            >
+              <option value="">Select a resource...</option>
+              {resources.map(r => (
+                <option key={r.id} value={r.id}>{r.name} - {r.location}</option>
+              ))}
+            </select>
           </div>
 
           {/* Contact Details */}
