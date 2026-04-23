@@ -18,16 +18,8 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public Booking.ResponseDTO createBooking(Booking.RequestDTO dto) {
-        if (!dto.getEndTime().isAfter(dto.getStartTime())) {
-            throw new IllegalStateException("End time must be after start time");
-        }
-
-        List<Booking> conflicts = bookingRepository.findConflictingBookings(
-            dto.getResourceId(), dto.getStartTime(), dto.getEndTime()
-        );
-        if (!conflicts.isEmpty()) {
-            throw new BookingConflictException("Resource already booked.");
-        }
+        validateBookingTimes(dto.getStartTime(), dto.getEndTime());
+        checkConflicts(dto.getResourceId(), dto.getStartTime(), dto.getEndTime(), null);
 
         Booking booking = Booking.builder()
             .userId(dto.getUserId())
@@ -43,29 +35,38 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public Booking.ResponseDTO getBookingById(Long id) {
-        return toDTO(bookingRepository.findById(id)
-            .orElseThrow(() -> new BookingNotFoundException(id)));
+    public Booking.ResponseDTO updateBooking(Long id, Booking.RequestDTO dto) {
+        Booking booking = bookingRepository.findById(id)
+            .orElseThrow(() -> new BookingNotFoundException(id));
+
+        // Logic: Only PENDING bookings can be updated
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new IllegalStateException("Only PENDING bookings can be updated. Current status: " + booking.getStatus());
+        }
+
+        validateBookingTimes(dto.getStartTime(), dto.getEndTime());
+        // Check conflicts but ignore this specific booking ID
+        checkConflicts(dto.getResourceId(), dto.getStartTime(), dto.getEndTime(), id);
+
+        booking.setStartTime(dto.getStartTime());
+        booking.setEndTime(dto.getEndTime());
+        booking.setPurpose(dto.getPurpose());
+        booking.setAttendeesCount(dto.getAttendeesCount());
+
+        return toDTO(bookingRepository.save(booking));
     }
 
     @Override
-    public List<Booking.ResponseDTO> getAllBookings() {
-        return bookingRepository.findAll().stream().map(this::toDTO).toList();
-    }
+    public void deleteBooking(Long id) {
+        Booking booking = bookingRepository.findById(id)
+            .orElseThrow(() -> new BookingNotFoundException(id));
 
-    @Override
-    public List<Booking.ResponseDTO> getBookingsByUser(Long userId) { // Change UUID to Long
-        return bookingRepository.findByUserId(userId).stream().map(this::toDTO).toList();
-    }
-
-    @Override
-    public List<Booking.ResponseDTO> getBookingsByStatus(BookingStatus status) {
-        return bookingRepository.findByStatus(status).stream().map(this::toDTO).toList();
-    }
-
-    @Override
-    public List<Booking.ResponseDTO> getBookingsByResource(Long resourceId) { // Change Integer to Long
-        return bookingRepository.findByResourceId(resourceId).stream().map(this::toDTO).toList();
+        // Logic: Only PENDING bookings can be deleted by the user
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new IllegalStateException("Cannot delete a booking that has already been " + booking.getStatus());
+        }
+        
+        bookingRepository.deleteById(id);
     }
 
     @Override
@@ -73,9 +74,8 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(id)
             .orElseThrow(() -> new BookingNotFoundException(id));
             
-        // Guard: Only allow approval if it's currently PENDING
         if (booking.getStatus() != BookingStatus.PENDING) {
-            throw new IllegalStateException("Only PENDING bookings can be approved. Current status: " + booking.getStatus());
+            throw new IllegalStateException("Only PENDING bookings can be approved.");
         }
 
         booking.setStatus(BookingStatus.APPROVED);
@@ -87,9 +87,8 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(id)
             .orElseThrow(() -> new BookingNotFoundException(id));
 
-        // Guard: Only allow rejection if it's currently PENDING
         if (booking.getStatus() != BookingStatus.PENDING) {
-            throw new IllegalStateException("Only PENDING bookings can be rejected. Current status: " + booking.getStatus());
+            throw new IllegalStateException("Only PENDING bookings can be rejected.");
         }
 
         booking.setStatus(BookingStatus.REJECTED);
@@ -102,9 +101,8 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(id)
             .orElseThrow(() -> new BookingNotFoundException(id));
 
-        // Guard: Only allow cancellation if it's currently APPROVED
         if (booking.getStatus() != BookingStatus.APPROVED) {
-            throw new IllegalStateException("Only APPROVED bookings can be cancelled. Current status: " + booking.getStatus());
+            throw new IllegalStateException("Only APPROVED bookings can be cancelled.");
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
@@ -112,28 +110,58 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public void deleteBooking(Long id) {
-        if (!bookingRepository.existsById(id)) {
-            throw new BookingNotFoundException(id);
-        }
-        bookingRepository.deleteById(id);
+    public Booking.ResponseDTO getBookingById(Long id) {
+        return toDTO(bookingRepository.findById(id)
+            .orElseThrow(() -> new BookingNotFoundException(id)));
     }
 
-    
+    @Override
+    public List<Booking.ResponseDTO> getAllBookings() {
+        return bookingRepository.findAll().stream().map(this::toDTO).toList();
+    }
+
+    @Override
+    public List<Booking.ResponseDTO> getBookingsByUser(Long userId) {
+        return bookingRepository.findByUserId(userId).stream().map(this::toDTO).toList();
+    }
+
+    @Override
+    public List<Booking.ResponseDTO> getBookingsByStatus(BookingStatus status) {
+        return bookingRepository.findByStatus(status).stream().map(this::toDTO).toList();
+    }
+
+    @Override
+    public List<Booking.ResponseDTO> getBookingsByResource(Long resourceId) {
+        return bookingRepository.findByResourceId(resourceId).stream().map(this::toDTO).toList();
+    }
+
+    // --- Private Helper Methods ---
+
+    private void validateBookingTimes(java.time.LocalDateTime start, java.time.LocalDateTime end) {
+        if (!end.isAfter(start)) {
+            throw new IllegalStateException("End time must be after start time");
+        }
+    }
+
+    private void checkConflicts(Long resourceId, java.time.LocalDateTime start, java.time.LocalDateTime end, Long currentBookingId) {
+        List<Booking> conflicts = bookingRepository.findConflictingBookings(resourceId, start, end);
+        
+        // If updating, ignore the conflict with itself
+        boolean hasRealConflict = conflicts.stream()
+            .anyMatch(b -> !b.getId().equals(currentBookingId));
+
+        if (hasRealConflict) {
+            throw new BookingConflictException("Resource already booked for the selected time slot.");
+        }
+    }
 
     private Booking.ResponseDTO toDTO(Booking b) {
         return Booking.ResponseDTO.builder()
-            .id(b.getId())
-            .userId(b.getUserId())
-            .resourceId(b.getResourceId())
-            .startTime(b.getStartTime())
-            .endTime(b.getEndTime())
-            .purpose(b.getPurpose())
-            .attendeesCount(b.getAttendeesCount())
-            .status(b.getStatus())
-            .rejectionReason(b.getRejectionReason())
-            .createdAt(b.getCreatedAt())
-            .updatedAt(b.getUpdatedAt())
+            .id(b.getId()).userId(b.getUserId()).resourceId(b.getResourceId())
+            .startTime(b.getStartTime()).endTime(b.getEndTime())
+            .purpose(b.getPurpose()).attendeesCount(b.getAttendeesCount())
+            .status(b.getStatus()).rejectionReason(b.getRejectionReason())
+            .createdAt(b.getCreatedAt()).updatedAt(b.getUpdatedAt())
             .build();
     }
 }

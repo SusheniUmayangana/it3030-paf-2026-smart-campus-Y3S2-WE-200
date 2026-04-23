@@ -25,6 +25,13 @@ public class BookingController {
             .body(bookingService.createBooking(dto));
     }
 
+    // Added: PUT mapping for updating existing PENDING bookings
+    @PutMapping("/{id}") // <--- Must have the {id} here
+    public ResponseEntity<Booking.ResponseDTO> updateBooking(
+        @PathVariable Long id, // <--- Name must match the one above
+        @Valid @RequestBody Booking.RequestDTO dto) {
+    return ResponseEntity.ok(bookingService.updateBooking(id, dto));
+    }
     @GetMapping
     public ResponseEntity<List<Booking.ResponseDTO>> getAllBookings(
             @RequestParam(required = false) BookingStatus status) {
@@ -39,17 +46,13 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getBookingById(id));
     }
 
-    // FIXED: Changed @PathVariable from UUID to Long
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Booking.ResponseDTO>> getBookingsByUser(
-            @PathVariable Long userId) { 
+    public ResponseEntity<List<Booking.ResponseDTO>> getBookingsByUser(@PathVariable Long userId) { 
         return ResponseEntity.ok(bookingService.getBookingsByUser(userId));
     }
 
-    // FIXED: Changed @PathVariable from Integer to Long
     @GetMapping("/resource/{resourceId}")
-    public ResponseEntity<List<Booking.ResponseDTO>> getBookingsByResource(
-            @PathVariable Long resourceId) {
+    public ResponseEntity<List<Booking.ResponseDTO>> getBookingsByResource(@PathVariable Long resourceId) {
         return ResponseEntity.ok(bookingService.getBookingsByResource(resourceId));
     }
 
@@ -62,7 +65,6 @@ public class BookingController {
     public ResponseEntity<Booking.ResponseDTO> rejectBooking(
             @PathVariable Long id,
             @Valid @RequestBody Booking.RejectDTO dto) {
-        // Passing the reason string from the DTO to match the updated Service
         return ResponseEntity.ok(bookingService.rejectBooking(id, dto.getReason()));
     }
 
