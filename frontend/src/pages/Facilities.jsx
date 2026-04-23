@@ -2,8 +2,12 @@ import React, { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { getResources, deleteResource, createResource, updateResource } from '../services/facilitiesService';
 import { Building2, Plus, X, Edit, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-const Facilities = () => {
+const Facilities = ({ user }) => {
+    // comes from the parent (App.js), not LocalStorage
+    const userRole = user?.role?.toUpperCase() || 'USER';
+
     const [list, setList] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -21,6 +25,13 @@ const Facilities = () => {
         availabilityEnd: DEFAULT_END,
         imageUrl: ''
     });
+
+    const navigate = useNavigate();
+
+    // Logic to decide what the user is allowed to see
+    const visibleList = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN'
+        ? list
+        : list.filter(item => item.status !== 'OFFLINE');
 
     const validateForm = () => {
         let tempErrors = {};
@@ -115,6 +126,7 @@ const Facilities = () => {
         });
     };
 
+
     return (
         <div className="p-10 bg-slate-950 min-h-screen text-white">
             <Toaster
@@ -135,12 +147,14 @@ const Facilities = () => {
                     </h1>
                     <p className="text-slate-400 text-sm mt-1">Resource Management Hub</p>
                 </div>
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="bg-indigo-600 p-3 rounded-lg flex items-center gap-2 hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20"
-                >
-                    <Plus size={20} /> Add Resource
-                </button>
+                {userRole === 'ADMIN' && (
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="bg-indigo-600 p-3 rounded-lg flex items-center gap-2 hover:bg-indigo-500 transition-all shadow-lg"
+                    >
+                        <Plus size={20} /> Add Resource
+                    </button>
+                )}
             </div>
 
             {/* Modal Overlay */}
@@ -272,9 +286,11 @@ const Facilities = () => {
                 </div>
             )}
 
+
+
             {/* Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {list.length > 0 ? list.map(item => (
+                {visibleList.length > 0 ? visibleList.map(item => (
                     <div key={item.id} className="group bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-3xl overflow-hidden hover:border-indigo-500/50 transition-all duration-300 shadow-xl flex flex-col">
 
                         {/* Image Section with Gradient Overlay */}
@@ -348,18 +364,45 @@ const Facilities = () => {
 
                             {/* Action Footer */}
                             <div className="mt-auto pt-6 flex gap-3">
-                                <button
-                                    onClick={() => handleEditClick(item)}
-                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white border border-indigo-500/20 transition-all text-xs font-bold"
-                                >
-                                    <Edit size={14} /> Edit
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(item.id)}
-                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-rose-500/5 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/10 transition-all text-xs font-bold"
-                                >
-                                    <Trash2 size={14} /> Remove
-                                </button>
+                                {userRole === 'ADMIN' ? (
+                                    <>
+                                        {/* ADMIN VIEW: Edit and Remove */}
+                                        <button
+                                            onClick={() => handleEditClick(item)}
+                                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white border border-indigo-500/20 transition-all text-xs font-bold"
+                                        >
+                                            <Edit size={14} /> Edit
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(item.id)}
+                                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-rose-500/5 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/10 transition-all text-xs font-bold"
+                                        >
+                                            <Trash2 size={14} /> Remove
+                                        </button>
+                                    </>
+                                ) : (
+                                    /* USER VIEW: Book Resource Logic */
+                                    <button
+                                        disabled={item.status === 'MAINTENANCE'}
+                                        onClick={() => {
+                                            if (item.status === 'OPERATIONAL') {
+                                                navigate(`/booking/${item.id}`);
+                                            } else {
+                                                toast.error("This facility is currently under maintenance.");
+                                            }
+                                        }}
+                                        className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all shadow-lg ${item.status === 'MAINTENANCE'
+                                            ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                                            : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-indigo-500/20'
+                                            }`}
+                                    >
+                                        {item.status === 'MAINTENANCE' ? (
+                                            <>🔒 Unavailable</>
+                                        ) : (
+                                            <>📅 Book Resource</>
+                                        )}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
