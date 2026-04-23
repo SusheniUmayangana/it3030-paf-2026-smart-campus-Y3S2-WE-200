@@ -38,10 +38,8 @@ public class IncidentTicketService {
         this.fileStorageService = fileStorageService;
     }
 
-    // Fetch all tickets with role-based filtering
     public Map<String, Object> getAll(String status, String priority, Pageable pageable, User caller) {
         Page<IncidentTicket> page;
-
         if (isAdmin(caller)) {
             if (status != null && priority != null) 
                 page = ticketRepository.findByStatusAndPriority(status, priority, pageable);
@@ -64,7 +62,6 @@ public class IncidentTicketService {
         return response;
     }
 
-    // Create a ticket and handle file storage
     @Transactional
     public Map<String, Object> create(Map<String, Object> body, List<MultipartFile> files, Long reporterId) {
         User reporter = userRepository.findById(reporterId)
@@ -90,18 +87,33 @@ public class IncidentTicketService {
                 attachmentRepository.save(attachment);
             }
         }
-
         return Map.of("success", true, "ticket", toTicketMap(saved));
     }
 
-    // Update ticket status for technicians
+    @Transactional
+    public Map<String, Object> assign(Long id, Map<String, Object> body) {
+        IncidentTicket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(id));
+
+        Long assigneeId = Long.valueOf(body.get("assigneeId").toString());
+        User assignee = userRepository.findById(assigneeId)
+                .orElseThrow(() -> new TicketException.AccessDenied("Technician not found."));
+
+        ticket.setAssignee(assignee);
+        ticket.setAssignedAt(LocalDateTime.now());
+        ticket.setStatus("IN_PROGRESS");
+
+        IncidentTicket updated = ticketRepository.save(ticket);
+        return Map.of("success", true, "ticket", toTicketMap(updated));
+    }
+
     @Transactional
     public Map<String, Object> updateStatus(Long id, Map<String, Object> body, User caller) {
         IncidentTicket existing = ticketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(id));
 
         boolean isAssigned = existing.getAssignee() != null && existing.getAssignee().getId().equals(caller.getId());
-        if (!isAssigned && !isAdmin(caller)) {
+        if (!isAdmin(caller) && !isAssigned) {
             throw new TicketException.AccessDenied("Not authorized to update this ticket.");
         }
 
@@ -114,23 +126,37 @@ public class IncidentTicketService {
         return Map.of("success", true, "ticket", toTicketMap(updated));
     }
 
-    // Helper for administrative check
+    @Transactional
+    public Map<String, Object> addComment(Long ticketId, String content, User author) {
+        IncidentTicket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException(ticketId));
+
+        TicketComment comment = new TicketComment();
+        comment.setTicket(ticket);
+        comment.setAuthor(author);
+        comment.setContent(content);
+        comment.setCreatedAt(LocalDateTime.now());
+
+        commentRepository.save(comment);
+        
+        return Map.of("success", true, "message", "Comment added successfully");
+    }
+
     private boolean isAdmin(User user) {
         return user != null && (user.getRole().equals("ADMIN") || user.getRole().equals("SUPER_ADMIN"));
     }
 
-    // Helper for technician check
     private boolean isTechnician(User user) {
         return user != null && user.getRole().equals("TECHNICIAN");
     }
 
-    // Simplify entity to map for response consistency
     private Map<String, Object> toTicketMap(IncidentTicket t) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("id", t.getId());
         map.put("title", t.getTitle());
         map.put("status", t.getStatus());
         map.put("priority", t.getPriority());
+        if (t.getAssignee() != null) map.put("assignee", t.getAssignee().getName());
         return map;
     }
 }

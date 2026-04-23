@@ -33,7 +33,6 @@ public class IncidentTicketController {
         this.userRepository = userRepository;
     }
 
-    // UPDATED: Matches service method name 'create'
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> createTicket(
             @RequestParam("title") String title,
@@ -46,7 +45,6 @@ public class IncidentTicketController {
             HttpServletRequest request) {
 
         User caller = getSessionUser(request);
-
         Map<String, Object> body = new HashMap<>();
         body.put("title", title);
         body.put("category", category);
@@ -55,12 +53,10 @@ public class IncidentTicketController {
         if (contactDetails != null) body.put("contactDetails", contactDetails);
         if (resourceId != null) body.put("resourceId", resourceId);
 
-        // Service call updated to .create()
         Map<String, Object> result = ticketService.create(body, files, caller.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
-    // UPDATED: Matches service method name 'getAll'
     @GetMapping
     public ResponseEntity<Map<String, Object>> getTickets(
             @RequestParam(required = false) String status,
@@ -71,13 +67,25 @@ public class IncidentTicketController {
 
         User caller = getSessionUser(request);
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-
-        // Service call updated to .getAll()
         Map<String, Object> result = ticketService.getAll(status, priority, pageable, caller);
         return ResponseEntity.ok(result);
     }
 
-    // UPDATED: Matches service method name 'updateStatus'
+    @PatchMapping("/{id}/assign")
+    public ResponseEntity<Map<String, Object>> assignTicket(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body,
+            HttpServletRequest request) {
+
+        User caller = getSessionUser(request);
+        if (!isAdmin(caller)) {
+            throw new TicketException.AccessDenied("Only admins can assign tickets.");
+        }
+
+        Map<String, Object> result = ticketService.assign(id, body);
+        return ResponseEntity.ok(result);
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<Map<String, Object>> updateStatus(
             @PathVariable Long id,
@@ -85,32 +93,39 @@ public class IncidentTicketController {
             HttpServletRequest request) {
 
         User caller = getSessionUser(request);
-
-        // Security check is handled within the service, but kept here for controller-level validation
         if (!isTechnician(caller) && !isAdmin(caller)) {
             throw new TicketException.AccessDenied("Only technicians or admins can update ticket status.");
         }
 
-        // Service call updated to .updateStatus()
         Map<String, Object> result = ticketService.updateStatus(id, body, caller);
         return ResponseEntity.ok(result);
     }
 
-    // Helper: Validates active session and retrieves User from repository
+    @PostMapping("/{id}/comments")
+    public ResponseEntity<Map<String, Object>> addComment(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request) {
+
+        User author = getSessionUser(request);
+        String content = body.get("content");
+        
+        Map<String, Object> result = ticketService.addComment(id, content, author);
+        return ResponseEntity.status(HttpStatus.CREATED).body(result);
+    }
+
     private User getSessionUser(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("userId") == null) {
             throw new TicketException.AccessDenied("You must be logged in.");
         }
-
         Long userId = (Long) session.getAttribute("userId");
         return userRepository.findById(userId)
                 .orElseThrow(() -> new TicketException.AccessDenied("Session user not found."));
     }
 
     private boolean isAdmin(User user) {
-        return user != null &&
-                ("ADMIN".equals(user.getRole()) || "SUPER_ADMIN".equals(user.getRole()));
+        return user != null && ("ADMIN".equals(user.getRole()) || "SUPER_ADMIN".equals(user.getRole()));
     }
 
     private boolean isTechnician(User user) {
