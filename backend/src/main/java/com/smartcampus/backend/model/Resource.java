@@ -21,6 +21,8 @@ public class Resource {
 
     private String location;
 
+    private String imageUrl;
+
     @Enumerated(EnumType.STRING)
     private ResourceStatus status;
 
@@ -34,6 +36,11 @@ public class Resource {
     public void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+
+        // Safety check for status
+        if (this.status == null) {
+            this.status = ResourceStatus.OPERATIONAL;
+        }
     }
 
     @PreUpdate
@@ -112,5 +119,13 @@ public class Resource {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 }
