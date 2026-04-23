@@ -8,7 +8,7 @@ export default function Sidebar({ user }) {
         { name: 'User Management', path: '/users', show: isAdmin },
         { name: 'My Profile', path: '/profile', show: true },
         { name: 'Facilities', path: '/facilities', show: true },
-        { name: 'Bookings', path: '/bookings', show: true },
+        { name: 'My Bookings', path: '/bookings', show: true },
         { name: 'Tickets', path: '/tickets', show: true },
         { name: 'Notifications', path: '/notifications', show: true },
     ];
