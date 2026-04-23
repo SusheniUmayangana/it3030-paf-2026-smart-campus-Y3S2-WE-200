@@ -59,7 +59,6 @@ public class IncidentTicket {
     @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TicketAttachment> attachments = new ArrayList<>();
 
-    // ── FIXED: was missing in your uploaded version ───────────
     @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TicketComment> comments = new ArrayList<>();
 
@@ -77,7 +76,7 @@ public class IncidentTicket {
 
     public IncidentTicket() {}
 
-    // ── Getters & Setters ─────────────────────────────────────
+    //Getters & Setters 
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
