@@ -35,7 +35,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // Disabled to allow Postman testing
                 .authorizeHttpRequests(auth -> auth
                         // Permits all requests so you can demonstrate your API during the viva
-                        .requestMatchers("/api/resources/**", "/api/auth/**").permitAll()
+                        .requestMatchers("/api/resources/**", "/api/auth/**", "/api/notifications/**").permitAll()
                         .anyRequest().permitAll())
                 .formLogin(login -> login.disable())
                 .httpBasic(basic -> basic.disable())
@@ -51,7 +51,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         // Allow your React frontend (Vite default port)
         config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 
