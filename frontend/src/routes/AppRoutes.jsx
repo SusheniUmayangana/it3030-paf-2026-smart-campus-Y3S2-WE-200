@@ -9,6 +9,7 @@ import UserManagement from '../pages/UserManagement';
 import Profile from '../pages/Profile';
 import Facilities from '../pages/Facilities';
 import Bookings from '../pages/Bookings';
+import BookingForm from '../pages/BookingForm';
 import Tickets from '../pages/Tickets';
 import Notifications from '../pages/Notifications';
 
@@ -23,7 +24,7 @@ export default function AppRoutes({ user, onSetUser, onLogout }) {
 
     const AdminRoute = ({ element }) => {
         if (!user) return <Navigate to="/login" replace />;
-        if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') return <Navigate to="/" replace />;
+        if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN' && user.role !== 'SUPER ADMIN') return <Navigate to="/" replace />;
         return element;
     };
 
@@ -39,7 +40,8 @@ export default function AppRoutes({ user, onSetUser, onLogout }) {
                 <Route path="/users" element={<AdminRoute element={<UserManagement user={user} />} />} />
                 <Route path="/profile" element={<ProtectedRoute element={<Profile user={user} onUserUpdate={(updated) => onSetUser({ ...user, ...updated })} />} />} />
                 <Route path="/facilities" element={<ProtectedRoute element={<Facilities user={user} />} />} />
-                <Route path="/bookings" element={<ProtectedRoute element={<Bookings />} />} />
+                <Route path="/booking/:resourceId" element={<ProtectedRoute element={<BookingForm user={user} />} />} />
+                <Route path="/bookings" element={<ProtectedRoute element={<Bookings user={user} />} />} />
                 <Route path="/tickets" element={<ProtectedRoute element={<Tickets />} />} />
                 <Route path="/notifications" element={<ProtectedRoute element={<Notifications />} />} />
             </Route>

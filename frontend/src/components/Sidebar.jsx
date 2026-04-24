@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 
 export default function Sidebar({ user }) {
-    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN' || user?.role === 'SUPER ADMIN';
 
     const links = [
         { name: 'Dashboard', path: '/', show: true },
