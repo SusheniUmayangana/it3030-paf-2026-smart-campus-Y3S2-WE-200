@@ -21,8 +21,21 @@ export async function getTickets({ status = '', priority = '', page = 0, size = 
 }
 
 /**
+ * GET /api/tickets/{id}
+ * Fetches single ticket details
+ */
+export async function getTicketById(ticketId) {
+  const res = await fetch(`${BASE_URL}/${ticketId}`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json()).message || 'Failed to fetch ticket');
+  return res.json();
+}
+
+/**
  * POST /api/tickets (multipart/form-data)
  * Creates a new ticket with optional image attachments
+ * User, Admin, Super Admin only (Technician cannot)
  */
 export async function createTicket(fields, files = []) {
   const form = new FormData();
@@ -44,7 +57,7 @@ export async function createTicket(fields, files = []) {
 }
 
 /**
- * PATCH /api/tickets/:id/assign (Admin only)
+ * PATCH /api/tickets/:id/assign (Admin & Super Admin only)
  */
 export async function assignTicket(ticketId, assigneeId) {
   const res = await fetch(`${BASE_URL}/${ticketId}/assign`, {
@@ -58,7 +71,9 @@ export async function assignTicket(ticketId, assigneeId) {
 }
 
 /**
- * PATCH /api/tickets/:id/status (Admin or assigned Technician)
+ * PATCH /api/tickets/:id/status
+ * Admin/Super Admin: any status
+ * Technician: only OPEN → IN_PROGRESS → RESOLVED on assigned tickets
  */
 export async function updateTicketStatus(ticketId, status, resolutionNotes = '') {
   const body = { status };
@@ -71,6 +86,32 @@ export async function updateTicketStatus(ticketId, status, resolutionNotes = '')
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error((await res.json()).message || 'Failed to update status');
+  return res.json();
+}
+
+/**
+ * PATCH /api/tickets/:id/reject (Admin & Super Admin only)
+ */
+export async function rejectTicket(ticketId, rejectionReason) {
+  const res = await fetch(`${BASE_URL}/${ticketId}/reject`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rejectionReason }),
+  });
+  if (!res.ok) throw new Error((await res.json()).message || 'Failed to reject ticket');
+  return res.json();
+}
+
+/**
+ * DELETE /api/tickets/:id (Super Admin only)
+ */
+export async function deleteTicket(ticketId) {
+  const res = await fetch(`${BASE_URL}/${ticketId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json()).message || 'Failed to delete ticket');
   return res.json();
 }
 
@@ -89,21 +130,21 @@ export async function addComment(ticketId, content) {
 }
 
 /**
- * GET /api/tickets/:id
+ * GET /api/tickets/:id/comments
  */
-export async function getTicket(ticketId) {
-  const res = await fetch(`${BASE_URL}/${ticketId}`, {
+export async function getComments(ticketId) {
+  const res = await fetch(`${BASE_URL}/${ticketId}/comments`, {
     credentials: 'include',
   });
-  if (!res.ok) throw new Error((await res.json()).message || 'Failed to fetch ticket details');
+  if (!res.ok) throw new Error((await res.json()).message || 'Failed to fetch comments');
   return res.json();
 }
 
 /**
- * PUT /api/tickets/comments/:commentId
+ * PUT /api/tickets/:ticketId/comments/:commentId (Owner only)
  */
-export async function editComment(commentId, content) {
-  const res = await fetch(`${BASE_URL}/comments/${commentId}`, {
+export async function editComment(ticketId, commentId, content) {
+  const res = await fetch(`${BASE_URL}/${ticketId}/comments/${commentId}`, {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -114,13 +155,42 @@ export async function editComment(commentId, content) {
 }
 
 /**
- * DELETE /api/tickets/comments/:commentId
+ * DELETE /api/tickets/:ticketId/comments/:commentId
+ * Owner or Admin/Super Admin can delete
  */
-export async function deleteComment(commentId) {
-  const res = await fetch(`${BASE_URL}/comments/${commentId}`, {
+export async function deleteComment(ticketId, commentId) {
+  const res = await fetch(`${BASE_URL}/${ticketId}/comments/${commentId}`, {
     method: 'DELETE',
     credentials: 'include',
   });
   if (!res.ok) throw new Error((await res.json()).message || 'Failed to delete comment');
+  return res.json();
+}
+
+/**
+ * POST /api/tickets/:id/attachments
+ */
+export async function addAttachment(ticketId, file) {
+  const form = new FormData();
+  form.append('file', file);
+  
+  const res = await fetch(`${BASE_URL}/${ticketId}/attachments`, {
+    method: 'POST',
+    credentials: 'include',
+    body: form,
+  });
+  if (!res.ok) throw new Error((await res.json()).message || 'Failed to add attachment');
+  return res.json();
+}
+
+/**
+ * DELETE /api/tickets/:ticketId/attachments/:attachmentId
+ */
+export async function deleteAttachment(ticketId, attachmentId) {
+  const res = await fetch(`${BASE_URL}/${ticketId}/attachments/${attachmentId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json()).message || 'Failed to delete attachment');
   return res.json();
 }
