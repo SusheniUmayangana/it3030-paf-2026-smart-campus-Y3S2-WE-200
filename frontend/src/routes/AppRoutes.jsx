@@ -40,7 +40,7 @@ export default function AppRoutes({ user, onSetUser, onLogout }) {
                 <Route path="/profile" element={<ProtectedRoute element={<Profile user={user} onUserUpdate={(updated) => onSetUser({ ...user, ...updated })} />} />} />
                 <Route path="/facilities" element={<ProtectedRoute element={<Facilities user={user} />} />} />
                 <Route path="/bookings" element={<ProtectedRoute element={<Bookings />} />} />
-                <Route path="/tickets" element={<ProtectedRoute element={<Tickets />} />} />
+                <Route path="/tickets" element={<ProtectedRoute element={<Tickets user={user} />} />} />
                 <Route path="/notifications" element={<ProtectedRoute element={<Notifications />} />} />
             </Route>
 
