@@ -1,23 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { X, Send, User, Clock, Trash2, Edit2, Check, XCircle } from 'lucide-react';
+import { X, Send, User, Clock, Trash2, Edit2, Check, XCircle, UserPlus } from 'lucide-react';
 import TicketBadge from './TicketBadge';
 import { 
   assignTicket, 
+  selfAssignTicket,
   updateTicketStatus, 
   rejectTicket,
   deleteTicket,
   addComment, 
   getComments,
   editComment,
-  deleteComment 
+  deleteComment,
+  getTechnicians
 } from '../services/ticketsService';
 
-const STATUS_OPTIONS = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED'];
+const STATUS_OPTIONS = ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED'];
 
 // Valid status transitions for technicians
 const TECHNICIAN_VALID_TRANSITIONS = {
-  'OPEN': ['IN_PROGRESS'],
+  'OPEN': ['ASSIGNED'],
+  'ASSIGNED': ['IN_PROGRESS'],
   'IN_PROGRESS': ['RESOLVED'],
   'RESOLVED': [],
   'CLOSED': [],
@@ -26,7 +29,8 @@ const TECHNICIAN_VALID_TRANSITIONS = {
 
 // Valid status transitions for Admin/Super Admin
 const ADMIN_VALID_TRANSITIONS = {
-  'OPEN': ['IN_PROGRESS', 'REJECTED'],
+  'OPEN': ['ASSIGNED', 'REJECTED'],
+  'ASSIGNED': ['IN_PROGRESS', 'REJECTED'],
   'IN_PROGRESS': ['RESOLVED', 'REJECTED'],
   'RESOLVED': ['CLOSED'],
   'CLOSED': [],
@@ -45,19 +49,24 @@ export default function TicketDetailModal({ ticket, user, onClose, onUpdated }) 
   const [resolutionNotes, setResolutionNotes] = useState(ticket.resolutionNotes || '');
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [assigneeId, setAssigneeId] = useState('');
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState('');
+  const [technicians, setTechnicians] = useState([]);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingContent, setEditingContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selfAssigning, setSelfAssigning] = useState(false);
+  const [failedImages, setFailedImages] = useState({});
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const isTechnician = user?.role === 'TECHNICIAN';
   const isTicketOwner = ticket.reporterId === user?.id;
   const isAssignedTech = ticket.assigneeId === user?.id;
+  const isUnassigned = !ticket.assignee;
   
   // Determine available status options based on role
   const getAvailableStatusOptions = () => {
@@ -74,13 +83,16 @@ export default function TicketDetailModal({ ticket, user, onClose, onUpdated }) 
   // Check if user can update status
   const canUpdateStatus = (isAdmin) || (isTechnician && isAssignedTech && availableStatuses.length > 0);
   
-  // Check if user can assign technicians
+  // Check if user can assign technicians (Admin only)
   const canAssign = isAdmin;
   
-  // Check if user can reject ticket
-  const canReject = isAdmin && (ticket.status === 'OPEN' || ticket.status === 'IN_PROGRESS');
+  // Check if technician can self-assign (only if unassigned and OPEN)
+  const canSelfAssign = isTechnician && isUnassigned && ticket.status === 'OPEN';
   
-  // Check if user can delete ticket
+  // Check if user can reject ticket (Admin only)
+  const canReject = isAdmin && (ticket.status === 'OPEN' || ticket.status === 'ASSIGNED' || ticket.status === 'IN_PROGRESS');
+  
+  // Check if user can delete ticket (Super Admin only)
   const canDeleteTicket = isSuperAdmin;
   
   // Check if user can delete any comment (Super Admin)
@@ -88,6 +100,21 @@ export default function TicketDetailModal({ ticket, user, onClose, onUpdated }) 
   
   // Check if user can edit/delete their own comments
   const canManageOwnComment = (commentAuthorId) => commentAuthorId === user?.id;
+
+  // Handle image load error
+  const handleImageError = (attachmentId) => {
+    setFailedImages(prev => ({ ...prev, [attachmentId]: true }));
+  };
+
+  // Load technicians for dropdown
+  const loadTechnicians = async () => {
+    try {
+      const data = await getTechnicians();
+      setTechnicians(data.technicians || []);
+    } catch (err) {
+      console.error('Failed to load technicians', err);
+    }
+  };
 
   // Load comments
   const loadComments = async () => {
@@ -101,21 +128,40 @@ export default function TicketDetailModal({ ticket, user, onClose, onUpdated }) 
 
   useEffect(() => {
     loadComments();
-  }, [ticket.id]);
+    if (isAdmin) {
+      loadTechnicians();
+    }
+  }, [ticket.id, isAdmin]);
 
-  // Assign technician
+  // Admin assigns technician
   const handleAssign = async () => {
-    if (!assigneeId) { toast.error('Enter a technician user ID'); return; }
+    if (!selectedTechnicianId) { toast.error('Select a technician'); return; }
     setLoading(true);
     try {
-      await assignTicket(ticket.id, Number(assigneeId));
+      await assignTicket(ticket.id, Number(selectedTechnicianId));
       toast.success('Ticket assigned!');
+      setShowAssignModal(false);
       onUpdated?.();
       onClose();
     } catch (err) {
       toast.error(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Technician self-assign
+  const handleSelfAssign = async () => {
+    setSelfAssigning(true);
+    try {
+      await selfAssignTicket(ticket.id);
+      toast.success('You have been assigned to this ticket!');
+      onUpdated?.();
+      onClose();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSelfAssigning(false);
     }
   };
 
@@ -135,7 +181,7 @@ export default function TicketDetailModal({ ticket, user, onClose, onUpdated }) 
     }
   };
 
-  // Reject ticket
+  // Reject ticket (Admin only)
   const handleReject = async () => {
     if (!rejectionReason.trim()) {
       toast.error('Please provide a rejection reason');
@@ -239,7 +285,6 @@ export default function TicketDetailModal({ ticket, user, onClose, onUpdated }) 
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Delete Ticket - Super Admin only */}
             {canDeleteTicket && (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
@@ -273,7 +318,7 @@ export default function TicketDetailModal({ ticket, user, onClose, onUpdated }) 
           </div>
         )}
 
-        {/* Reject Modal */}
+        {/* Reject Modal - Admin only */}
         {showRejectModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="glass rounded-2xl p-6 max-w-md w-full">
@@ -297,6 +342,33 @@ export default function TicketDetailModal({ ticket, user, onClose, onUpdated }) 
           </div>
         )}
 
+        {/* Assign Modal - Admin only */}
+        {showAssignModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="glass rounded-2xl p-6 max-w-md w-full">
+              <h3 className="text-lg font-bold text-surface-100 mb-4">Assign to Technician</h3>
+              <select
+                value={selectedTechnicianId}
+                onChange={(e) => setSelectedTechnicianId(e.target.value)}
+                className="w-full bg-surface-800/50 border border-surface-700/50 rounded-xl px-4 py-2.5 text-surface-100 focus:outline-none focus:border-primary-500/50 transition-all mb-4"
+              >
+                <option value="">Select a technician...</option>
+                {technicians.map(tech => (
+                  <option key={tech.id} value={tech.id}>{tech.name} ({tech.email})</option>
+                ))}
+              </select>
+              <div className="flex gap-3">
+                <button onClick={() => setShowAssignModal(false)} className="flex-1 px-4 py-2 rounded-xl bg-surface-800/50 text-surface-300 hover:bg-surface-700/50 transition-all">
+                  Cancel
+                </button>
+                <button onClick={handleAssign} className="flex-1 px-4 py-2 rounded-xl bg-primary-600 text-white hover:bg-primary-500 transition-all">
+                  {loading ? 'Assigning...' : 'Assign'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Meta row */}
         <div className="flex flex-wrap gap-4 mb-5 text-sm text-surface-400">
           {ticket.reporter && (
@@ -304,9 +376,13 @@ export default function TicketDetailModal({ ticket, user, onClose, onUpdated }) 
               <User className="w-4 h-4" /> Reported by: {ticket.reporter}
             </span>
           )}
-          {ticket.assignee && (
+          {ticket.assignee ? (
             <span className="flex items-center gap-1.5">
               <User className="w-4 h-4 text-primary-400" /> Assigned to: {ticket.assignee}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5">
+              <User className="w-4 h-4 text-yellow-400" /> Unassigned
             </span>
           )}
           {ticket.createdAt && (
@@ -329,21 +405,35 @@ export default function TicketDetailModal({ ticket, user, onClose, onUpdated }) 
           </div>
         )}
 
-        {/* Attachments */}
+        {/* Attachments with fallback for failed images */}
         {ticket.attachments?.length > 0 && (
           <div className="mb-5">
             <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-2">Attachments</p>
             <div className="flex flex-wrap gap-2">
               {ticket.attachments.map((att, i) => (
-                <a
-                  key={i}
-                  href={att.fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block w-24 h-24 rounded-xl overflow-hidden border border-surface-700/50 hover:border-primary-500/50 transition-all"
-                >
-                  <img src={att.fileUrl} alt={att.fileName} className="w-full h-full object-cover" />
-                </a>
+                <div key={i} className="relative group">
+                  {failedImages[att.id] ? (
+                    <div className="w-24 h-24 rounded-xl bg-surface-800/50 border border-surface-700/50 flex flex-col items-center justify-center p-2">
+                      <span className="text-xs text-surface-500 text-center truncate w-full">{att.fileName}</span>
+                      <a 
+                        href={att.fileUrl} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="text-xs text-primary-400 hover:text-primary-300 mt-1"
+                      >
+                        View
+                      </a>
+                    </div>
+                  ) : (
+                    <img
+                      src={att.fileUrl}
+                      alt={att.fileName}
+                      className="w-24 h-24 object-cover rounded-xl border border-surface-700/50 hover:border-primary-500/40 transition-all cursor-pointer"
+                      onError={() => handleImageError(att.id)}
+                      onClick={() => window.open(att.fileUrl, '_blank')}
+                    />
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -367,39 +457,43 @@ export default function TicketDetailModal({ ticket, user, onClose, onUpdated }) 
 
         <hr className="border-surface-700/50 mb-5" />
 
-        {/* ========== ADMIN ACTIONS ========== */}
+        {/* ========== ASSIGNMENT ACTIONS ========== */}
         
-        {/* Assign Technician - Admin & Super Admin only */}
+        {/* Admin: Assign to Technician button */}
         {canAssign && !ticket.assignee && ticket.status !== 'REJECTED' && ticket.status !== 'CLOSED' && (
           <div className="mb-5">
-            <p className="text-sm font-semibold text-surface-300 mb-2">Assign to Technician</p>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                value={assigneeId}
-                onChange={(e) => setAssigneeId(e.target.value)}
-                placeholder="Technician user ID"
-                className="flex-1 bg-surface-800/50 border border-surface-700/50 rounded-xl px-4 py-2 text-surface-100 placeholder-surface-500 focus:outline-none focus:border-primary-500/50 transition-all text-sm"
-              />
-              <button
-                onClick={handleAssign}
-                disabled={loading}
-                className="px-4 py-2 rounded-xl text-sm font-semibold bg-primary-600 text-white hover:bg-primary-500 transition-all disabled:opacity-50"
-              >
-                Assign
-              </button>
-            </div>
+            <button
+              onClick={() => setShowAssignModal(true)}
+              className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-primary-600/20 border border-primary-500/30 text-primary-400 hover:bg-primary-600/30 transition-all flex items-center justify-center gap-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              Assign to Technician
+            </button>
           </div>
         )}
 
-        {/* Reject Button - Admin & Super Admin only */}
+        {/* Technician: Self-Assign button */}
+        {canSelfAssign && (
+          <div className="mb-5">
+            <button
+              onClick={handleSelfAssign}
+              disabled={selfAssigning}
+              className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-green-600/20 border border-green-500/30 text-green-400 hover:bg-green-600/30 transition-all flex items-center justify-center gap-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              {selfAssigning ? 'Assigning...' : 'Assign to Myself'}
+            </button>
+          </div>
+        )}
+
+        {/* Admin: Reject Button */}
         {canReject && (
           <div className="mb-5">
             <button
               onClick={() => setShowRejectModal(true)}
-              className="w-full px-4 py-2 rounded-xl text-sm font-semibold bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-all"
+              className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-all flex items-center justify-center gap-2"
             >
-              <XCircle className="w-4 h-4 inline mr-2" />
+              <XCircle className="w-4 h-4" />
               Reject Ticket
             </button>
           </div>
@@ -428,12 +522,12 @@ export default function TicketDetailModal({ ticket, user, onClose, onUpdated }) 
                 Save
               </button>
             </div>
-            {(newStatus === 'RESOLVED' || newStatus === 'CLOSED') && (
+            {((newStatus === 'RESOLVED' && (isAdmin || isAssignedTech)) || (newStatus === 'CLOSED' && isAdmin)) && (
               <textarea
                 rows={2}
                 value={resolutionNotes}
                 onChange={(e) => setResolutionNotes(e.target.value)}
-                placeholder="Add resolution notes (optional)..."
+                placeholder="Add resolution notes..."
                 className="w-full bg-surface-800/50 border border-surface-700/50 rounded-xl px-4 py-2 text-surface-100 placeholder-surface-500 focus:outline-none focus:border-primary-500/50 transition-all text-sm resize-none"
               />
             )}
@@ -458,7 +552,6 @@ export default function TicketDetailModal({ ticket, user, onClose, onUpdated }) 
                       {comment.isEdited && <span className="text-xs text-surface-500 italic">(edited)</span>}
                     </div>
                     <div className="flex items-center gap-1">
-                      {/* Edit own comment */}
                       {canManageOwnComment(comment.author?.id) && !comment.isDeleted && (
                         <button
                           onClick={() => {
@@ -470,7 +563,6 @@ export default function TicketDetailModal({ ticket, user, onClose, onUpdated }) 
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                       )}
-                      {/* Delete comment - Owner or Super Admin */}
                       {(canManageOwnComment(comment.author?.id) || canDeleteAnyComment) && !comment.isDeleted && (
                         <button
                           onClick={() => handleDeleteComment(comment.id)}

@@ -33,6 +33,18 @@ export async function getTicketById(ticketId) {
 }
 
 /**
+ * GET /api/tickets/technicians
+ * Get list of all technicians for assignment dropdown
+ */
+export async function getTechnicians() {
+  const res = await fetch(`${BASE_URL}/technicians`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json()).message || 'Failed to fetch technicians');
+  return res.json();
+}
+
+/**
  * POST /api/tickets (multipart/form-data)
  * Creates a new ticket with optional image attachments
  * User, Admin, Super Admin only (Technician cannot)
@@ -67,6 +79,19 @@ export async function assignTicket(ticketId, assigneeId) {
     body: JSON.stringify({ assigneeId }),
   });
   if (!res.ok) throw new Error((await res.json()).message || 'Failed to assign ticket');
+  return res.json();
+}
+
+/**
+ * PATCH /api/tickets/:id/self-assign
+ * Technician self-assigns to a ticket
+ */
+export async function selfAssignTicket(ticketId) {
+  const res = await fetch(`${BASE_URL}/${ticketId}/self-assign`, {
+    method: 'PATCH',
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error((await res.json()).message || 'Failed to self-assign ticket');
   return res.json();
 }
 
