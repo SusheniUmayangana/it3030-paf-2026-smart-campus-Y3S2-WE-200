@@ -1,20 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { getResources, deleteResource, createResource, updateResource } from '../services/facilitiesService';
-import { Building2, Plus, X, Edit, Trash2 } from 'lucide-react';
+import { Building2, Plus, X, Edit, Trash2, Search, Filter, Users, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Facilities = ({ user }) => {
     // comes from the parent (App.js), not LocalStorage
     const userRole = user?.role?.toUpperCase() || 'USER';
+    const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
 
     const [list, setList] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [errors, setErrors] = useState({});
+
+    // --- SEARCH & FILTER STATES ---
+    const [searchQuery, setSearchQuery] = useState("");
+    const [filterType, setFilterType] = useState("ALL");
+    const [filterCapacity, setFilterCapacity] = useState(0);
+    const [filterStatus, setFilterStatus] = useState("ALL");
+
     const DEFAULT_START = '08:00';
     const DEFAULT_END = '18:00';
+
     const [formData, setFormData] = useState({
         name: '',
         location: '',
@@ -29,9 +38,23 @@ const Facilities = ({ user }) => {
     const navigate = useNavigate();
 
     // Logic to decide what the user is allowed to see
-    const visibleList = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN'
-        ? list
-        : list.filter(item => item.status !== 'OFFLINE');
+    const visibleList = list.filter(item => {
+        const isRoleVisible = isAdmin || item.status !== 'OFFLINE';
+        // Search by Name or Location
+        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.location.toLowerCase().includes(searchQuery.toLowerCase());
+
+        // Filter by Type
+        const matchesType = filterType === "ALL" || item.type === filterType;
+
+        // Filter by Capacity
+        const matchesCapacity = item.capacity >= filterCapacity;
+
+        // Filter by Status (Admin Only Logic)
+        const matchesStatus = filterStatus === "ALL" || item.status === filterStatus;
+
+        return isRoleVisible && matchesSearch && matchesType && matchesCapacity && matchesStatus;
+    });
 
     const validateForm = () => {
         let tempErrors = {};
@@ -157,6 +180,67 @@ const Facilities = ({ user }) => {
                 )}
             </div>
 
+            {/* --- SEARCH & FILTER BAR --- */}
+            <div className={`grid grid-cols-1 ${isAdmin ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-4 mb-10`}>
+                {/* Search Box */}
+                <div className={`${isAdmin ? 'md:col-span-1' : 'md:col-span-2'} relative group`}>
+                    <Search className="absolute left-4 top-3.5 text-slate-500" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Search..."
+                        className="w-full bg-slate-900/50 border border-slate-800 p-3 pl-12 rounded-2xl outline-none focus:border-indigo-500/50 text-sm"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+
+                {/* Type Filter */}
+                <div className="relative">
+                    <Filter className="absolute left-4 top-3.5 text-slate-500" size={16} />
+                    <select
+                        className="w-full bg-slate-900/50 border border-slate-800 p-3 pl-12 rounded-2xl outline-none text-sm appearance-none"
+                        value={filterType}
+                        onChange={(e) => setFilterType(e.target.value)}
+                    >
+                        <option value="ALL">All Types</option>
+                        <option value="LECTURE_HALL">Lecture Halls</option>
+                        <option value="LABORATORY">Laboratories</option>
+                        <option value="STUDY_AREA">Study Areas</option>
+                        <option value="MEETING_ROOM">Meeting Rooms</option>
+                        <option value="EQUIPMENT">Equipment</option>
+                    </select>
+                </div>
+
+                {/* Capacity Filter */}
+                <div className="relative">
+                    <Users className="absolute left-4 top-3.5 text-slate-500" size={16} />
+                    <input
+                        type="number"
+                        placeholder="Min Capacity"
+                        className="w-full bg-slate-900/50 border border-slate-800 p-3 pl-12 rounded-2xl outline-none text-sm"
+                        value={filterCapacity || ''}
+                        onChange={(e) => setFilterCapacity(Number(e.target.value))}
+                    />
+                </div>
+
+                {/* --- ADMIN ONLY STATUS FILTER --- */}
+                {isAdmin && (
+                    <div className="relative">
+                        <Activity className="absolute left-4 top-3.5 text-indigo-400" size={16} />
+                        <select
+                            className="w-full bg-indigo-500/10 border border-indigo-500/20 p-3 pl-12 rounded-2xl outline-none text-sm appearance-none text-indigo-300"
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                        >
+                            <option value="ALL">All Status</option>
+                            <option value="OPERATIONAL">OPERATIONAL</option>
+                            <option value="MAINTENANCE">MAINTENANCE</option>
+                            <option value="OFFLINE">OFFLINE</option>
+                        </select>
+                    </div>
+                )}
+            </div>
+
             {/* Modal Overlay */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -231,6 +315,8 @@ const Facilities = ({ user }) => {
                                         <option value="LABORATORY">Laboratory</option>
                                         <option value="STUDY_AREA">Study Area</option>
                                         <option value="SPORTS_FACILITY">Sports Facility</option>
+                                        <option value="MEETING_ROOM">Meeting Room</option>
+                                        <option value="EQUIPMENT">Equipment</option>
                                     </select>
                                 </div>
                                 <div>
