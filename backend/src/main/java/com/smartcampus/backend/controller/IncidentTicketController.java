@@ -92,6 +92,19 @@ public class IncidentTicketController {
         return ResponseEntity.ok(result);
     }
 
+    // ========== GET ALL TECHNICIANS ==========
+    // For assignment dropdown - accessible to Admins and Technicians (for self-assign dropdown)
+    @GetMapping("/technicians")
+    public ResponseEntity<Map<String, Object>> getTechnicians(HttpServletRequest request) {
+        User caller = getSessionUser(request);
+        // Only Admins and Technicians can view technician list
+        if (!isAdmin(caller) && !"TECHNICIAN".equals(caller.getRole())) {
+            throw new TicketException.AccessDenied("Access denied.");
+        }
+        Map<String, Object> result = ticketService.getAvailableTechnicians();
+        return ResponseEntity.ok(result);
+    }
+
     // ========== ASSIGN TECHNICIAN ==========
     // Admin and Super Admin only
     @PatchMapping("/{id}/assign")
@@ -106,6 +119,22 @@ public class IncidentTicketController {
         }
 
         Map<String, Object> result = ticketService.assign(id, body);
+        return ResponseEntity.ok(result);
+    }
+
+    // ========== SELF ASSIGN TECHNICIAN ==========
+    // Technicians can assign themselves to unassigned OPEN/IN_PROGRESS tickets
+    @PatchMapping("/{id}/self-assign")
+    public ResponseEntity<Map<String, Object>> selfAssignTicket(
+            @PathVariable Long id,
+            HttpServletRequest request) {
+
+        User caller = getSessionUser(request);
+        if (!"TECHNICIAN".equals(caller.getRole())) {
+            throw new TicketException.AccessDenied("Only technicians can self-assign tickets.");
+        }
+
+        Map<String, Object> result = ticketService.selfAssign(id, caller);
         return ResponseEntity.ok(result);
     }
 

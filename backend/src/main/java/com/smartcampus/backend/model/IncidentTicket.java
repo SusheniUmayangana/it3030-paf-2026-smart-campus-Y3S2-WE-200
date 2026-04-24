@@ -2,6 +2,9 @@ package com.smartcampus.backend.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,8 +30,10 @@ public class IncidentTicket {
     @JoinColumn(name = "resource_id")
     private Resource resource;
 
+    // ADDED: OnDelete SET NULL - When a User is deleted, set assignee_id to NULL
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assignee_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private User assignee;
 
     @NotBlank(message = "Category is required")
@@ -41,7 +46,7 @@ public class IncidentTicket {
     @NotBlank(message = "Priority is required")
     private String priority; // LOW, MEDIUM, HIGH, CRITICAL
 
-    private String status = "OPEN"; // OPEN, IN_PROGRESS, RESOLVED, CLOSED, REJECTED
+    private String status = "OPEN"; // OPEN, ASSIGNED, IN_PROGRESS, RESOLVED, CLOSED, REJECTED
 
     @Column(columnDefinition = "TEXT")
     private String resolutionNotes;
@@ -76,7 +81,7 @@ public class IncidentTicket {
 
     public IncidentTicket() {}
 
-    //Getters & Setters 
+    // Getters & Setters
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

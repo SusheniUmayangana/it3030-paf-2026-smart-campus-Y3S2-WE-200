@@ -5,6 +5,7 @@ import com.smartcampus.backend.exception.TicketException;
 import com.smartcampus.backend.model.*;
 import com.smartcampus.backend.repository.*;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +13,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class IncidentTicketService {
@@ -42,7 +45,7 @@ public class IncidentTicketService {
 
     // ========== GET ALL TICKETS (Role-based) ==========
     // User → own tickets only
-    // Technician → assigned tickets only
+    // Technician → assigned tickets + OPEN unassigned tickets
     // Admin/Super Admin → all tickets
     @Transactional(readOnly = true)
     public Map<String, Object> getAll(String status, String priority, Pageable pageable, User caller) {
@@ -59,11 +62,54 @@ public class IncidentTicketService {
             else 
                 page = ticketRepository.findAll(pageable);
         } else if (isTechnician(caller)) {
-            // Technician: see only assigned tickets
-            page = ticketRepository.findByAssignee_Id(caller.getId(), pageable);
+            // Technician: see assigned tickets + OPEN unassigned tickets
+            
+            // Get assigned tickets
+            Page<IncidentTicket> assignedPage = ticketRepository.findByAssignee_Id(caller.getId(), pageable);
+            
+            // Get unassigned OPEN tickets (only OPEN, not IN_PROGRESS)
+            Page<IncidentTicket> unassignedPage = ticketRepository.findByStatusInAndAssigneeIsNull(
+                List.of("OPEN"), pageable);
+            
+            // Merge both lists
+            List<IncidentTicket> mergedList = Stream.concat(
+                assignedPage.getContent().stream(),
+                unassignedPage.getContent().stream()
+            ).distinct().collect(Collectors.toList());
+            
+            // Sort by createdAt descending
+            mergedList.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+            
+            // Apply status filter if provided
+            if (status != null && !status.isEmpty()) {
+                mergedList = mergedList.stream()
+                    .filter(t -> t.getStatus().equals(status))
+                    .collect(Collectors.toList());
+            }
+            
+            // Apply priority filter if provided
+            if (priority != null && !priority.isEmpty()) {
+                mergedList = mergedList.stream()
+                    .filter(t -> t.getPriority().equals(priority))
+                    .collect(Collectors.toList());
+            }
+            
+            // Apply pagination manually
+            int start = (int) pageable.getOffset();
+            int end = Math.min((start + pageable.getPageSize()), mergedList.size());
+            List<IncidentTicket> pagedList = start < mergedList.size() ? mergedList.subList(start, end) : List.of();
+            
+            page = new PageImpl<>(pagedList, pageable, mergedList.size());
         } else {
             // Regular User: see only their own tickets
-            page = ticketRepository.findByReporter_Id(caller.getId(), pageable);
+            if (status != null && priority != null) 
+                page = ticketRepository.findByReporter_IdAndStatusAndPriority(caller.getId(), status, priority, pageable);
+            else if (status != null) 
+                page = ticketRepository.findByReporter_IdAndStatus(caller.getId(), status, pageable);
+            else if (priority != null) 
+                page = ticketRepository.findByReporter_IdAndPriority(caller.getId(), priority, pageable);
+            else 
+                page = ticketRepository.findByReporter_Id(caller.getId(), pageable);
         }
 
         Map<String, Object> response = new LinkedHashMap<>();
@@ -71,7 +117,7 @@ public class IncidentTicketService {
         response.put("totalElements", page.getTotalElements());
         response.put("totalPages", page.getTotalPages());
         response.put("currentPage", page.getNumber());
-        response.put("tickets", page.getContent().stream().map(this::toTicketMap).toList());
+        response.put("tickets", page.getContent().stream().map(this::toTicketMap).collect(Collectors.toList()));
         return response;
     }
 
@@ -136,6 +182,27 @@ public class IncidentTicketService {
         return Map.of("success", true, "message", "Ticket created successfully.", "ticket", toTicketMap(saved));
     }
 
+    // ========== GET AVAILABLE TECHNICIANS ==========
+    // Get all users and filter by TECHNICIAN role (since we cannot modify UserRepository)
+    @Transactional(readOnly = true)
+    public Map<String, Object> getAvailableTechnicians() {
+        List<User> allUsers = userRepository.findAll();
+        List<User> technicians = allUsers.stream()
+            .filter(user -> "TECHNICIAN".equals(user.getRole()))
+            .collect(Collectors.toList());
+        
+        List<Map<String, Object>> techList = technicians.stream()
+            .map(tech -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", tech.getId());
+                map.put("name", tech.getName());
+                map.put("email", tech.getEmail());
+                return map;
+            })
+            .collect(Collectors.toList());
+        return Map.of("success", true, "technicians", techList);
+    }
+
     // ========== ASSIGN TECHNICIAN ==========
     // Admin/Super Admin only
     @Transactional
@@ -159,10 +226,33 @@ public class IncidentTicketService {
 
         ticket.setAssignee(assignee);
         ticket.setAssignedAt(LocalDateTime.now());
-        ticket.setStatus("IN_PROGRESS");
+        ticket.setStatus("ASSIGNED");
 
         IncidentTicket updated = ticketRepository.save(ticket);
         return Map.of("success", true, "message", "Technician assigned successfully.", "ticket", toTicketMap(updated));
+    }
+
+    // ========== SELF ASSIGN TECHNICIAN ==========
+    @Transactional
+    public Map<String, Object> selfAssign(Long id, User technician) {
+        IncidentTicket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(id));
+        
+        // Can only self-assign OPEN tickets that are unassigned
+        if (!List.of("OPEN").contains(ticket.getStatus())) {
+            throw new TicketException.InvalidOperation("Cannot self-assign a ticket with status: " + ticket.getStatus());
+        }
+        
+        if (ticket.getAssignee() != null) {
+            throw new TicketException.InvalidOperation("This ticket is already assigned to another technician.");
+        }
+        
+        ticket.setAssignee(technician);
+        ticket.setAssignedAt(LocalDateTime.now());
+        ticket.setStatus("ASSIGNED");
+        
+        IncidentTicket updated = ticketRepository.save(ticket);
+        return Map.of("success", true, "message", "You have been assigned to this ticket.", "ticket", toTicketMap(updated));
     }
 
     // ========== UPDATE STATUS ==========
@@ -183,11 +273,11 @@ public class IncidentTicketService {
 
         // Technician can only update assigned tickets with specific transitions
         if (isTechnicianUser && !isAdminUser) {
-            // Technician can only: OPEN → IN_PROGRESS → RESOLVED
+            // Technician can only: ASSIGNED → IN_PROGRESS → RESOLVED
             String currentStatus = ticket.getStatus();
             boolean validTransition = false;
             
-            if ("OPEN".equals(currentStatus) && "IN_PROGRESS".equals(newStatus)) {
+            if ("ASSIGNED".equals(currentStatus) && "IN_PROGRESS".equals(newStatus)) {
                 validTransition = true;
             } else if ("IN_PROGRESS".equals(currentStatus) && "RESOLVED".equals(newStatus)) {
                 validTransition = true;
@@ -197,7 +287,7 @@ public class IncidentTicketService {
             
             if (!validTransition) {
                 throw new TicketException.InvalidOperation(
-                    "Technicians can only change status from OPEN to IN_PROGRESS, or IN_PROGRESS to RESOLVED.");
+                    "Technicians can only change status from ASSIGNED to IN_PROGRESS, or IN_PROGRESS to RESOLVED.");
             }
         }
 
@@ -223,8 +313,8 @@ public class IncidentTicketService {
         IncidentTicket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(id));
 
-        if (!List.of("OPEN", "IN_PROGRESS").contains(ticket.getStatus())) {
-            throw new TicketException.InvalidOperation("Only OPEN or IN_PROGRESS tickets can be rejected.");
+        if (!List.of("OPEN", "ASSIGNED", "IN_PROGRESS").contains(ticket.getStatus())) {
+            throw new TicketException.InvalidOperation("Only OPEN, ASSIGNED or IN_PROGRESS tickets can be rejected.");
         }
 
         String reason = (String) body.get("rejectionReason");
@@ -271,7 +361,7 @@ public class IncidentTicketService {
                 .findByTicket_IdAndIsDeletedFalseOrderByCreatedAtAsc(ticketId)
                 .stream()
                 .map(this::toCommentMap)
-                .toList();
+                .collect(Collectors.toList());
 
         return Map.of("success", true, "comments", comments);
     }
@@ -382,6 +472,60 @@ public class IncidentTicketService {
         return Map.of("success", true, "message", "Attachment deleted.");
     }
 
+    // ========== USER DELETION SUPPORT (To prevent foreign key constraint violations) ==========
+    // These methods help when deleting a user who is assigned as a technician
+    
+    /**
+     * Check if a user is assigned as a technician to any tickets
+     * @param userId The ID of the user to check
+     * @return true if the user is assigned to at least one ticket
+     */
+    @Transactional(readOnly = true)
+    public boolean isUserAssignedToTickets(Long userId) {
+        return ticketRepository.countByAssignee_Id(userId) > 0;
+    }
+
+    /**
+     * Get the count of tickets assigned to a user
+     * @param userId The ID of the user
+     * @return Number of tickets assigned to this user
+     */
+    @Transactional(readOnly = true)
+    public long countTicketsAssignedToUser(Long userId) {
+        return ticketRepository.countByAssignee_Id(userId);
+    }
+
+    /**
+     * Unassign a user from all tickets (set assignee_id to NULL)
+     * This should be called BEFORE deleting a user to avoid foreign key constraint violations
+     * @param userId The ID of the user to unassign
+     */
+    @Transactional
+    public void unassignUserFromAllTickets(Long userId) {
+        List<IncidentTicket> tickets = ticketRepository.findAllByAssignee_Id(userId);
+        
+        for (IncidentTicket ticket : tickets) {
+            ticket.setAssignee(null);
+            ticket.setAssignedAt(null);
+            // If the ticket was ASSIGNED or IN_PROGRESS and becomes unassigned, revert to OPEN
+            if (List.of("ASSIGNED", "IN_PROGRESS").contains(ticket.getStatus())) {
+                ticket.setStatus("OPEN");
+            }
+            ticketRepository.save(ticket);
+        }
+    }
+
+    /**
+     * Get all tickets assigned to a user (useful for displaying before deletion)
+     * @param userId The ID of the user
+     * @return List of tickets assigned to this user
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getTicketsAssignedToUser(Long userId) {
+        List<IncidentTicket> tickets = ticketRepository.findAllByAssignee_Id(userId);
+        return tickets.stream().map(this::toTicketMap).collect(Collectors.toList());
+    }
+
     // ========== HELPERS ==========
     
     private IncidentTicket getTicketOrThrow(Long id) {
@@ -391,7 +535,11 @@ public class IncidentTicketService {
 
     private void enforceReadAccess(IncidentTicket ticket, User caller) {
         if (isAdmin(caller)) return;
-        if (isTechnician(caller) && ticket.getAssignee() != null && ticket.getAssignee().getId().equals(caller.getId())) return;
+        if (isTechnician(caller)) {
+            // Technician can see assigned tickets OR unassigned OPEN tickets
+            if (ticket.getAssignee() != null && ticket.getAssignee().getId().equals(caller.getId())) return;
+            if (ticket.getAssignee() == null && List.of("OPEN").contains(ticket.getStatus())) return;
+        }
         if (!ticket.getReporter().getId().equals(caller.getId())) {
             throw new TicketException.AccessDenied("You do not have access to this ticket.");
         }

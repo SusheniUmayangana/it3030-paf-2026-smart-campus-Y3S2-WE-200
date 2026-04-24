@@ -37,16 +37,23 @@ public class FileStorageService {
             Files.createDirectories(uploadPath);
 
             // Generate unique name using current time in milliseconds
-            String fileName = System.currentTimeMillis() + "_" + sanitizeFileName(file.getOriginalFilename());
+            String originalFileName = file.getOriginalFilename();
+            String fileName = System.currentTimeMillis() + "_" + sanitizeFileName(originalFileName);
             Path targetPath = uploadPath.resolve(fileName);
 
             Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
-            return baseUrl + "/uploads/tickets/" + fileName;
+            return baseUrl + "/api/files/tickets/" + fileName;
 
         } catch (IOException ex) {
             throw new TicketException.InvalidOperation("Failed to store file. Please try again.");
         }
+    }
+
+    // Get file as byte array for direct download/view
+    public byte[] getFile(String fileName) throws IOException {
+        Path filePath = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(fileName);
+        return Files.readAllBytes(filePath);
     }
 
     // Delete existing file from storage
@@ -73,7 +80,7 @@ public class FileStorageService {
 
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
-            throw new TicketException.InvalidOperation("File type not allowed.");
+            throw new TicketException.InvalidOperation("File type not allowed. Only JPEG, PNG, GIF, WEBP are supported.");
         }
     }
 
