@@ -19,6 +19,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByResourceId(Long resourceId);
 
+    long countByUserId(Long userId);
+
     @Query("SELECT b FROM Booking b WHERE b.resourceId = :resourceId " +
            "AND b.status IN ('PENDING', 'APPROVED') " +
            "AND b.startTime < :endTime " +
