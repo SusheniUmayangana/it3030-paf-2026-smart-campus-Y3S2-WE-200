@@ -31,3 +31,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+node_modules/
+target/
+dist/
+build/
+.env
+*.class
+*.jar
