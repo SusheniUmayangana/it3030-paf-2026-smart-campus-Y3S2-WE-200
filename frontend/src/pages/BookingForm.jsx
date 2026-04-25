@@ -10,10 +10,10 @@ const BookingForm = ({ user }) => {
     const navigate = useNavigate();
     const [resource, setResource] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     // Default to today, or tomorrow if it's late
     const today = new Date().toISOString().split('T')[0];
-    
+
     const [formData, setFormData] = useState({
         date: today,
         startTime: '08:00',
@@ -44,7 +44,7 @@ const BookingForm = ({ user }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         // Validation
         if (!formData.purpose.trim()) {
             return toast.error("Purpose is required");
@@ -55,7 +55,7 @@ const BookingForm = ({ user }) => {
         if (formData.attendeesCount < 1) {
             return toast.error("At least 1 attendee is required");
         }
-        
+
         if (resource && formData.attendeesCount > resource.capacity) {
             return toast.error(`Attendees exceed capacity of ${resource.capacity}`);
         }
@@ -78,7 +78,11 @@ const BookingForm = ({ user }) => {
             toast.success("Booking request submitted successfully!");
             setTimeout(() => navigate('/bookings'), 1500);
         } catch (err) {
-            if (err.response?.status === 409 || err.response?.data?.message?.includes('conflict') || err.response?.data?.includes('conflict')) {
+            const isConflict = err.response?.status === 409 || 
+                (typeof err.response?.data?.message === 'string' && err.response.data.message.includes('conflict')) || 
+                (typeof err.response?.data === 'string' && err.response.data.includes('conflict'));
+                
+            if (isConflict) {
                 toast.error("Scheduling Conflict: Resource is already booked for this time.");
             } else {
                 toast.error(err.response?.data?.message || "Failed to submit booking. Please try again.");
@@ -96,13 +100,13 @@ const BookingForm = ({ user }) => {
                     style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' },
                 }}
             />
-            
+
             <div className="w-full max-w-2xl glass rounded-3xl p-8 border border-slate-800 shadow-2xl relative overflow-hidden">
                 {/* Background Decoration */}
                 <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500"></div>
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl"></div>
-                
-                <button 
+
+                <button
                     onClick={() => navigate('/facilities')}
                     className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6 font-medium text-sm"
                 >

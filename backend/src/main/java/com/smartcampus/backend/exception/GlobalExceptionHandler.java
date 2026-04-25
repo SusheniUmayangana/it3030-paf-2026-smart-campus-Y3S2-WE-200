@@ -21,6 +21,11 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
+    @ExceptionHandler(BookingConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleBookingConflict(BookingConflictException ex) {
+        return buildError(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
     @ExceptionHandler(TicketException.AccessDenied.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(TicketException.AccessDenied ex) {
         return buildError(HttpStatus.FORBIDDEN, ex.getMessage());
