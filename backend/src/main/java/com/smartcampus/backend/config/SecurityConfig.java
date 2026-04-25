@@ -35,7 +35,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // Disabled to allow Postman testing
                 .authorizeHttpRequests(auth -> auth
                         // Permits all requests so you can demonstrate your API during the viva
-                        .requestMatchers("/api/resources/**", "/api/auth/**", "/api/notifications/**").permitAll()
+                        .requestMatchers("/api/resources/**", "/api/auth/**", "/api/notifications/**", "/api/dashboard/**").permitAll()
                         .anyRequest().permitAll())
                 .formLogin(login -> login.disable())
                 .httpBasic(basic -> basic.disable())
