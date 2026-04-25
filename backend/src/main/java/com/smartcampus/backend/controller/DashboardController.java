@@ -1,12 +1,17 @@
 package com.smartcampus.backend.controller;
 
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.smartcampus.backend.repository.BookingRepository;
 import com.smartcampus.backend.repository.ResourceRepository;
 import com.smartcampus.backend.repository.UserRepository;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/dashboard")
@@ -25,11 +30,7 @@ public class DashboardController {
         this.userRepository = userRepository;
     }
 
-    /**
-     * GET /api/dashboard/admin-stats
-     * Returns total facilities, bookings, and users count.
-     * Intended for ADMIN and SUPER_ADMIN roles (authorization enforced on the frontend).
-     */
+    
     @GetMapping("/admin-stats")
     public ResponseEntity<Map<String, Long>> getAdminStats() {
         long totalFacilities = resourceRepository.count();
@@ -43,11 +44,7 @@ public class DashboardController {
         ));
     }
 
-    /**
-     * GET /api/dashboard/user-stats/{userId}
-     * Returns the booking count for a specific user.
-     * Used by USER, MANAGER, and TECHNICIAN roles.
-     */
+   
     @GetMapping("/user-stats/{userId}")
     public ResponseEntity<Map<String, Long>> getUserStats(@PathVariable Long userId) {
         long myBookings = bookingRepository.countByUserId(userId);

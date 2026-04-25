@@ -32,7 +32,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         String picture = oAuth2User.getAttribute("picture");
         String providerId = oAuth2User.getAttribute("sub");
 
-        // Create or update user in database
+        
         User user = userRepository.findByEmail(email).orElse(null);
 
         if (user == null) {
@@ -44,7 +44,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             userRepository.save(user);
         }
 
-        // Redirect to frontend after successful login
+        
         response.sendRedirect("http://localhost:5173");
     }
 }

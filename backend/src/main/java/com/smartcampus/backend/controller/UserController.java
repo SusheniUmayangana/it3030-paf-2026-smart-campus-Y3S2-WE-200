@@ -1,16 +1,24 @@
 package com.smartcampus.backend.controller;
 
-import com.smartcampus.backend.model.User;
-import com.smartcampus.backend.repository.UserRepository;
-import com.smartcampus.backend.service.UserService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.smartcampus.backend.model.User;
+import com.smartcampus.backend.repository.UserRepository;
+import com.smartcampus.backend.service.UserService;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/api/users")
@@ -24,7 +32,7 @@ public class UserController {
         this.userRepository = userRepository;
     }
 
-    // ========== Helper: get logged-in user from session ==========
+    
     private User getSessionUser(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("userId") == null) {
@@ -38,9 +46,9 @@ public class UserController {
         return user != null && ("ADMIN".equals(user.getRole()) || "SUPER_ADMIN".equals(user.getRole()));
     }
 
-    // ========== ADMIN ENDPOINTS ==========
+    
 
-    /** GET /api/users — list all users (admin/super_admin only) */
+    
     @GetMapping
     public ResponseEntity<?> getAllUsers(HttpServletRequest request) {
         User caller = getSessionUser(request);
@@ -49,12 +57,12 @@ public class UserController {
         }
 
         List<User> users = userService.getAllUsers();
-        // Map to safe DTOs (exclude password)
+        
         List<Map<String, Object>> result = users.stream().map(this::toDto).toList();
         return ResponseEntity.ok(result);
     }
 
-    /** GET /api/users/{id} — get user by ID (admin/super_admin only) */
+    
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id, HttpServletRequest request) {
         User caller = getSessionUser(request);
@@ -67,7 +75,7 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /** PUT /api/users/{id} — update user (admin/super_admin only) */
+    
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(@PathVariable Long id,
                                         @RequestBody Map<String, String> body,
@@ -85,7 +93,7 @@ public class UserController {
         }
     }
 
-    /** DELETE /api/users/{id} — delete user (admin/super_admin only) */
+    
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id, HttpServletRequest request) {
         User caller = getSessionUser(request);
@@ -101,9 +109,9 @@ public class UserController {
         }
     }
 
-    // ========== SELF-PROFILE ENDPOINTS ==========
+    
 
-    /** GET /api/users/profile — get own profile */
+    
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(HttpServletRequest request) {
         User caller = getSessionUser(request);
@@ -113,7 +121,7 @@ public class UserController {
         return ResponseEntity.ok(toDto(caller));
     }
 
-    /** PUT /api/users/profile — update own profile (name/email only) */
+    
     @PutMapping("/profile")
     public ResponseEntity<?> updateProfile(@RequestBody Map<String, String> body,
                                            HttpServletRequest request) {
@@ -130,7 +138,7 @@ public class UserController {
         }
     }
 
-    // ========== DTO helper (exclude password) ==========
+    
     private Map<String, Object> toDto(User user) {
         Map<String, Object> dto = new HashMap<>();
         dto.put("id", user.getId());

@@ -1,18 +1,24 @@
 package com.smartcampus.backend.controller;
 
-import com.smartcampus.backend.model.User;
-import com.smartcampus.backend.repository.UserRepository;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.smartcampus.backend.model.User;
+import com.smartcampus.backend.repository.UserRepository;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -28,7 +34,7 @@ public class AuthController {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // ==================== SIGNUP ====================
+    
     @PostMapping("/signup")
     public ResponseEntity<Map<String, Object>> signup(@RequestBody Map<String, String> body) {
         Map<String, Object> response = new HashMap<>();
@@ -51,7 +57,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body(response);
         }
 
-        // Validate and sanitize role
+        
         if (role == null || role.isBlank()) {
             role = "USER";
         } else {
@@ -84,7 +90,7 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    // ==================== LOGIN ====================
+    
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> body,
                                                       HttpServletRequest request) {
@@ -132,7 +138,7 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    // ==================== AUTH STATUS ====================
+    
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getAuthStatus(
             @AuthenticationPrincipal OAuth2User oAuth2User,
@@ -154,7 +160,7 @@ public class AuthController {
             return ResponseEntity.ok(response);
         }
 
-        // Check session-based user (local login)
+        
         HttpSession session = request.getSession(false);
         if (session != null && session.getAttribute("userId") != null) {
             Long userId = (Long) session.getAttribute("userId");
@@ -175,7 +181,7 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    // ==================== LOGOUT ====================
+    
     @PostMapping("/logout")
     public ResponseEntity<Map<String, Object>> logout(HttpServletRequest request) {
         HttpSession session = request.getSession(false);

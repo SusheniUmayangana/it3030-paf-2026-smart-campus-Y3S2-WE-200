@@ -1,6 +1,11 @@
 package com.smartcampus.backend.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "users")
@@ -30,11 +35,11 @@ public class User {
     @Column(nullable = false)
     private String role; // USER, ADMIN, TECHNICIAN
 
-    // 1. REQUIRED: Empty constructor for Spring/JPA (Do not delete)
+    
     public User() {
     }
 
-    // 2. NEW: The 6-argument constructor to fix the OAuth Handler error
+    
     public User(String email, String name, String profilePicture, String provider, String providerId, String role) {
         this.email = email;
         this.name = name;
@@ -44,7 +49,7 @@ public class User {
         this.role = role;
     }
 
-    // Getters and Setters
+    
     public Long getId() {
         return id;
     }

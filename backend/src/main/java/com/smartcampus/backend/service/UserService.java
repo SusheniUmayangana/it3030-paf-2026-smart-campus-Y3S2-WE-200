@@ -1,12 +1,13 @@
 package com.smartcampus.backend.service;
 
-import com.smartcampus.backend.model.User;
-import com.smartcampus.backend.repository.UserRepository;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+
+import com.smartcampus.backend.model.User;
+import com.smartcampus.backend.repository.UserRepository;
 
 @Service
 public class UserService {
@@ -25,10 +26,7 @@ public class UserService {
         return userRepository.findById(id);
     }
 
-    /**
-     * Admin/Super-admin updates another user's details.
-     * Only SUPER_ADMIN can set role to ADMIN.
-     */
+    
     public User updateUser(Long id, Map<String, String> body, String callerRole) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
@@ -41,7 +39,7 @@ public class UserService {
         }
         if (body.containsKey("role") && body.get("role") != null) {
             String newRole = body.get("role").toUpperCase().trim();
-            // Only SUPER_ADMIN can assign ADMIN or SUPER_ADMIN roles
+            
             if ("ADMIN".equals(newRole) || "SUPER_ADMIN".equals(newRole)) {
                 if (!"SUPER_ADMIN".equals(callerRole)) {
                     throw new RuntimeException("Only SUPER_ADMIN can assign ADMIN role.");
@@ -53,9 +51,7 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    /**
-     * A user updates their own profile (name and email only — not role).
-     */
+    
     public User updateProfile(Long id, Map<String, String> body) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
