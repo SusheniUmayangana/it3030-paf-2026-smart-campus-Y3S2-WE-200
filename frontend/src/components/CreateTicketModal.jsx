@@ -26,8 +26,11 @@ export default function CreateTicketModal({ onClose, onCreated }) {
 
   useEffect(() => {
     getResources()
-      .then(res => setResources(res.data))
-      .catch(err => console.error('Failed to load resources', err));
+      .then(res => setResources(Array.isArray(res.data) ? res.data : []))
+      .catch(err => {
+        console.error('Failed to load resources', err);
+        setResources([]);
+      });
   }, []);
 
   const validate = () => {
@@ -82,16 +85,19 @@ export default function CreateTicketModal({ onClose, onCreated }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-lg glass rounded-2xl p-6 shadow-2xl animate-fade-in overflow-y-auto max-h-[90vh]">
+      <div className="w-full max-w-lg glass rounded-2xl shadow-2xl animate-fade-in flex flex-col max-h-[90vh]">
 
-        <div className="flex items-center justify-between mb-6">
+        {/* Sticky header — always visible */}
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0">
           <h2 className="text-xl font-bold text-surface-100">New Incident Ticket</h2>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-surface-800/50 text-surface-400 hover:text-surface-200 transition-all">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex flex-col gap-4">
+        {/* Scrollable form body */}
+        <div className="overflow-y-auto flex-1 px-6 pb-2">
+        <div className="flex flex-col gap-4 pb-4">
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-surface-300 mb-1">Title *</label>
@@ -224,9 +230,10 @@ export default function CreateTicketModal({ onClose, onCreated }) {
             )}
           </div>
         </div>
+        </div>
 
-        {/* Actions */}
-        <div className="flex gap-3 mt-6">
+        {/* Actions — always visible at the bottom */}
+        <div className="flex gap-3 px-6 py-4 flex-shrink-0 border-t border-surface-700/40">
           <button
             onClick={onClose}
             className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-surface-400 hover:text-surface-200 hover:bg-surface-800/50 border border-surface-700/50 transition-all"

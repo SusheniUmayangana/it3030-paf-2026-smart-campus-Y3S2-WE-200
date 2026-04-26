@@ -21,7 +21,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tickets")
-@CrossOrigin(origins = "*")
 public class IncidentTicketController {
 
     private final IncidentTicketService ticketService;
